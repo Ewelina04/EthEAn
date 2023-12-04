@@ -5694,7 +5694,9 @@ with st.sidebar:
             if 'boxTopic' not in st.session_state and "boxPlatform" not in st.session_state:
                 st.session_state['boxTopic'] = False
                 st.session_state['boxPlatform'] = False
+                
 
+            box_ind = st.checkbox("Individual corpora", value= True)
             box_topic = st.checkbox("Topic-based", disabled=st.session_state.boxPlatform, key="boxTopic")
             box_platform = st.checkbox("Platform-based", disabled=st.session_state.boxTopic, key="boxPlatform")
 
