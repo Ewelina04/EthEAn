@@ -5684,7 +5684,7 @@ with st.sidebar:
 
         elif contents_radio_type == 'Single Corpus':
             add_spacelines(1)
-            st.write('Corpora Aspect')
+            st.write('Choose corpora')
             bool1 = False
             bool2 = False
             bool3 = False
