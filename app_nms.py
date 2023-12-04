@@ -3947,7 +3947,7 @@ def ProfilesEntity_compare(data_list, selected_rhet_dim):
 
         #st.write(dd2_size_2[dd2_size_2['profile'] == 'other'])
         fig_pr = sns.catplot(kind = 'bar', data = dd2_size_2_pr, x = 'percentage', y = 'profile',
-                aspect = 1.65, palette = plt2)
+                aspect = 1.65, palette = plt2, legend = False )
         titl_fig = selected_rhet_dim.replace('_label', '')
         fig_pr.set(title = f'{titl_fig.capitalize()} profiles in {ds}', xlim = (0,100), xticks = np.arange(0, 100, 15))
         st.pyplot(fig_pr)
