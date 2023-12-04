@@ -6676,6 +6676,7 @@ elif contents_radio_type in ['Compare Corpora', 'Single Corpus']:
         elif contents_radio3 == 'Rhetoric Strategies':
             UserRhetStrategy(data_list = corpora_list)
         else:
+            st.write(corpora_list)
             distribution_plot_compareX(data_list = corpora_list)
 
 
