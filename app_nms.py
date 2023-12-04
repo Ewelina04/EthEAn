@@ -6194,7 +6194,7 @@ with st.sidebar:
 
 
 #####################  page content  #####################
-st.title(f"Polarising Moral Panic Analytics")
+st.title(f"Affective Polarisation: Ethos & Emotions Analytics")
 add_spacelines(1)
 
 @st.cache_data
