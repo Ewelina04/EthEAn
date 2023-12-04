@@ -2,11 +2,11 @@
 
 abslex = r"abuseLexicon.xlsx"
 
-vac_red = r"data\PolarIs1_VaccRed_up_ext.xlsx"   #r"PolarIs1_VaccRed_up.xlsx"
-vac_tw = r"data\Polaris2_2_up.xlsx"  # r"Polaris2_2.xlsx"
-cch_red = r"data\Polaris3_2_up.xlsx"  #  r"Polaris3_2.xlsx"
-cch_tw =  r"data\Polaris4_up.xlsx"  # r"Polaris4.xlsx"
-us16 = r"data\app_US2016_up.xlsx"  # app_US2016_up
+vac_red = r"PolarIs1_VaccRed_up_ext.xlsx"   #r"PolarIs1_VaccRed_up.xlsx"
+vac_tw = r"Polaris2_2_up.xlsx"  # r"Polaris2_2.xlsx"
+cch_red = r"Polaris3_2_up.xlsx"  #  r"Polaris3_2.xlsx"
+cch_tw =  r"Polaris4_up.xlsx"  # r"Polaris4.xlsx"
+us16 = r"app_US2016_up.xlsx"  # app_US2016_up
 
 
 # imports
