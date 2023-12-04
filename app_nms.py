@@ -4302,7 +4302,7 @@ def TargetHeroScores_compare(data_list, singl_an = True):
                     else:
                         return 'background-color: white'
 
-                st.write(cops_names[n])
+                st.write(f"##### {cops_names[n]} ")
                 df_dist_hist_all_0 = df_dist_hist_all_0.sort_values(by = 'score')
                 df_dist_hist_all_0 = df_dist_hist_all_0.reset_index(drop=True)
                 df_dist_hist_all_0 = df_dist_hist_all_0.set_index('Target').reset_index()
@@ -4315,8 +4315,10 @@ def TargetHeroScores_compare(data_list, singl_an = True):
                 f_sup0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'heroes'].Target.values), 800, 500, '#1E1E1E', 'Greens')
 
                 add_spacelines(1)
+                st.write(f" **Anti-heroes** ")
                 st.pyplot(f_att0)
                 add_spacelines(2)
+                st.write(f" **Heroes** ")
                 st.pyplot(f_sup0)
 
 
