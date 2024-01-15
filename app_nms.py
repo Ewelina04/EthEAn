@@ -1956,7 +1956,37 @@ def OddsRatioLog(df_list, an_type = 'ADU-based'):
     df['odds_words_'+df_odds_neg.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_neg_words) ))
 
 
-    tab_odd, tab_pos, tab_abuse = st.tabs(['Odds', 'POS', 'Abusiveness'])
+    tab_odd, tab_pos, tab_abuse, c_explore = st.tabs(['Odds', 'POS', 'Abusiveness', 'Explore Corpora'])
+
+    with c_explore:
+        df['abusive_words'] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.lower().split()).intersection(abus_words)  ))
+        df['abusive'] = np.where( df.abusive_words.str.split().map(len) >= 1, 1, 0 )
+        st.write(df)
+        st.write('### Explore corpora')
+        dff_columns = [ 'sentence', 'source', 'ethos_label', 'emotion', 'sentiment', 'abusive', 'Target' ]# , 'conversation_id','date', 'pathos_label'
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        if not 'neutral' in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+        dff = df.copy()
+        dff['sentence'] = dff['sentence'].astype('str').str.replace('amp;', '')
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[-4:-2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
+
+
     with tab_odd:
         oddpos_c, oddneg_c = st.columns(2, gap = 'large')
         if selected_rhet_dim == 'ethos_label':
@@ -2198,259 +2228,331 @@ def PronousLoP(df_list):
 def FreqTables(df_list, rhetoric_dims = [ 'ethos']):
     st.write("### Word Frequency Tables")
     add_spacelines(2)
+    tab_analytics, tab_explore = st.tabs(['Analytics', 'Explore Corpora'])
 
-    selected_rhet_dim = st.selectbox("Choose a rhetoric strategy for analysis", rhetoric_dims, index=0)
-    selected_rhet_dim = selected_rhet_dim+"_label"
-    add_spacelines(1)
-    df = df_list[0]
-    df = clean_text(df, 'sentence_lemmatized', text_column_name = "sentence_lemmatized")
-    #df = lemmatization(df, 'content')
-    if not 'neutral' in df['ethos_label'].unique():
-        df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
-    if not 'pathos_label' in df['pathos_label'].unique():
-        df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+    with tab_analytics:
+        selected_rhet_dim = st.selectbox("Choose a rhetoric strategy for analysis", rhetoric_dims, index=0)
+        selected_rhet_dim = selected_rhet_dim+"_label"
+        add_spacelines(1)
+        df = df_list[0]
 
-    ddmsc = ['support', 'attack']
-    if selected_rhet_dim == 'pathos_label':
-        ddmsc = ['positive', 'negative']
+        contents_radio_heroes = st.radio("Choose a category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
+        df.Target = df.Target.astype('str')
+        df['sentence'] = df.sentence.astype('str').str.replace("amp;", "")
 
-    odds_list_of_dicts = []
+        emo_list = list( df.emotion.unique() )
+        emo_list.append('all')
+        contents_radio_emotion_freq_tab = st.radio("Choose a category of emotions", emo_list[::-1])
+        if contents_radio_emotion_freq_tab != 'all':
+            df = df[df.emotion == contents_radio_emotion_freq_tab]
 
-    # 1 vs rest
-    #num = np.floor( len(df) / 10 )
-    for ddmsc1 in ddmsc:
-        dict_1vsall_percent = {}
-        dict_1vsall_effect_size = {}
-        ddmsc2w = " ".join( df[df[selected_rhet_dim] == ddmsc1].sentence_lemmatized.fillna('').astype('str').values ).split()
+        if contents_radio_heroes == "direct ethos":
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            targets_limit.append('nan')
 
-        ddmsc2w = Counter(ddmsc2w).most_common()
-        ddmsc2w_word = dict(ddmsc2w)
-        odds_list_of_dicts.append(ddmsc2w_word)
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+        elif contents_radio_heroes == "3rd party ethos":
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            targets_limit.append('nan')
 
-
-    df_odds_pos = pd.DataFrame({
-                'word':odds_list_of_dicts[0].keys(),
-                'frequency':odds_list_of_dicts[0].values(),
-    })
-    df_odds_pos['category'] = ddmsc[0]
-    df_odds_neg = pd.DataFrame({
-                'word':odds_list_of_dicts[1].keys(),
-                'frequency':odds_list_of_dicts[1].values(),
-    })
-    df_odds_neg['category'] = ddmsc[1]
-    df_odds_neg = df_odds_neg.sort_values(by = ['frequency'], ascending = False)
-    #df_odds_neg = df_odds_neg[df_odds_neg.frequency > 2]
-    df_odds_pos = df_odds_pos.sort_values(by = ['frequency'], ascending = False)
-    #df_odds_pos = df_odds_pos[df_odds_pos.frequency > 2]
-
-    df_odds_neg = transform_text(df_odds_neg, 'word')
-    df_odds_pos = transform_text(df_odds_pos, 'word')
-    pos_list = ['NOUN', 'VERB', 'NUM', 'PROPN', 'ADJ', 'ADV']
-    df_odds_neg['POS_tags']  = np.where(df_odds_neg.word == 'url', 'NOUN', df_odds_neg['POS_tags'])
-    df_odds_pos['POS_tags']  = np.where(df_odds_pos.word == 'url', 'NOUN', df_odds_pos['POS_tags'])
-    df_odds_neg = df_odds_neg[df_odds_neg.POS_tags.isin(pos_list)]
-    df_odds_pos = df_odds_pos[df_odds_pos.POS_tags.isin(pos_list)]
-    df_odds_neg = df_odds_neg.reset_index(drop=True)
-    df_odds_pos = df_odds_pos.reset_index(drop=True)
-
-    df_odds_neg['abusive'] = df_odds_neg.word.apply(lambda x: " ".join( set(x.lower().split()).intersection(abus_words)  ))
-    df_odds_neg['abusive'] = np.where( df_odds_neg['abusive'].fillna('').astype('str').map(len) > 1 , 'abusive', 'non-abusive' )
-    df_odds_pos['abusive'] = df_odds_pos.word.apply(lambda x: " ".join( set(x.lower().split()).intersection(abus_words)  ))
-    df_odds_pos['abusive'] = np.where( df_odds_pos['abusive'].fillna('').astype('str').map(len) > 1, 'abusive', 'non-abusive' )
-
-    df_odds_pos.index += 1
-    df_odds_neg.index += 1
-
-    if "sentence_lemmatized" in df.columns:
-        df.sentence_lemmatized = df.sentence_lemmatized.str.replace(" pyro sick ", " pyro2sick ")
-
-    import nltk
-    oddpos_c, oddneg_c = st.columns(2, gap = 'large')
-    dimm = selected_rhet_dim.split("_")[0]
-    with oddpos_c:
-        st.write(f'Number of **{dimm} {df_odds_pos.category.iloc[0]}** words: {len(df_odds_pos)} ')
-        st.dataframe(df_odds_pos)
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
         add_spacelines(1)
 
-        pos_list_freq = df_odds_pos.word.tolist()
-        freq_word_pos = st.multiselect('Choose a word you would like to see data cases for', pos_list_freq, pos_list_freq[:4:2])
-        df_odds_pos_words = set(freq_word_pos)
-        df['freq_words_'+df_odds_pos.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
 
-        add_spacelines(1)
-        cols_odds1 = ['source', 'sentence', 'ethos_label', 'pathos_label', 'Target',
-                         'freq_words_'+df_odds_pos.category.iloc[0]]
-        df01 = df[ (df['freq_words_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_pos.category.iloc[0]) ]
-        txt_df01 = " ".join(df01.sentence_lemmatized.values)
-        df['mentions'] = df.sentence.apply(lambda x: " ".join( w for w in str(x).split() if "@" in w ))
 
-        df_targets = " ".join( df.mentions.dropna().str.replace("@", "").str.lower().unique() ).split()
-        t = nltk.tokenize.WhitespaceTokenizer()
-        #c = Text(t.tokenize(txt_df01))
+        df = clean_text(df, 'sentence_lemmatized', text_column_name = "sentence_lemmatized")
+        #df = lemmatization(df, 'content')
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        if not 'pathos_label' in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping)
 
-        #st.write(freq_word_pos[0], txt_df01[:50])
-        #st.write(c.concordance_list(freq_word_pos[0], width=51, lines=50))
-        # Loading Libraries
-        from nltk.collocations import TrigramCollocationFinder, BigramCollocationFinder
-        from nltk.metrics import TrigramAssocMeasures, BigramAssocMeasures
-        from nltk.corpus import stopwords
-        stopset = set(stopwords.words('english'))
-        filter_stops = lambda w: len(w) < 3 or w in stopset
+        ddmsc = ['support', 'attack']
+        if selected_rhet_dim == 'pathos_label':
+            ddmsc = ['positive', 'negative']
 
-        def get_keyword_collocations(corpus, keyword, windowsize=10, numresults=10):
-            import string
-            from nltk.tokenize import word_tokenize
-            from nltk.collocations import BigramCollocationFinder
-            from nltk.collocations import BigramAssocMeasures
-            from nltk.corpus import stopwords
-            nltk.download('punkt')
-            #'''This function uses the Natural Language Toolkit to find collocations
-            #for a specific keyword in a corpus. It takes as an argument a string that
-            #contains the corpus you want to find collocations from. It prints the top
-            #collocations it finds for each keyword.
-            #https://github.com/ahegel/collocations/blob/master/get_collocations3.py
-            #'''
-            # convert the corpus (a string) into  a list of words
-            tokens = word_tokenize(corpus)
-            # initialize the bigram association measures object to score each collocation
-            bigram_measures = BigramAssocMeasures()
-            # initialize the bigram collocation finder object to find and rank collocations
-            finder = BigramCollocationFinder.from_words(tokens, window_size=windowsize)
-            # initialize a function that will narrow down collocates that don't contain the keyword
-            keyword_filter = lambda *w: keyword not in w
-            # apply a series of filters to narrow down the collocation results
-            ignored_words = stopwords.words('english')
-            finder.apply_word_filter(lambda w: len(w) < 2 or w.lower() in ignored_words)
-            finder.apply_freq_filter(2)
-            finder.apply_ngram_filter(keyword_filter)
-            # calculate the top results by T-score
-            # list of all possible measures: .raw_freq, .pmi, .likelihood_ratio, .chi_sq, .phi_sq, .fisher, .student_t, .mi_like, .poisson_stirling, .jaccard, .dice
-            results = finder.nbest(bigram_measures.student_t, numresults)
-            # print the results
-            print("Top collocations for ", str(keyword), ":")
-            collocations = ''
-            for k, v in results:
-                if k != keyword:
-                    collocations += k + ' '
-                else:
-                    collocations += v + ' '
-            #print(collocations, '\n')
-            st.write(collocations, '\n')
+        odds_list_of_dicts = []
 
-        words_of_interest = list(freq_word_pos) # ["love", "die"]
+        # 1 vs rest
+        #num = np.floor( len(df) / 10 )
+        for ddmsc1 in ddmsc:
+            dict_1vsall_percent = {}
+            dict_1vsall_effect_size = {}
+            ddmsc2w = " ".join( df[df[selected_rhet_dim] == ddmsc1].sentence_lemmatized.fillna('').astype('str').values ).split()
+
+            ddmsc2w = Counter(ddmsc2w).most_common()
+            ddmsc2w_word = dict(ddmsc2w)
+            odds_list_of_dicts.append(ddmsc2w_word)
+
+
+        df_odds_pos = pd.DataFrame({
+                    'word':odds_list_of_dicts[0].keys(),
+                    'frequency':odds_list_of_dicts[0].values(),
+        })
+        df_odds_pos['category'] = ddmsc[0]
+        df_odds_neg = pd.DataFrame({
+                    'word':odds_list_of_dicts[1].keys(),
+                    'frequency':odds_list_of_dicts[1].values(),
+        })
+        df_odds_neg['category'] = ddmsc[1]
+        df_odds_neg = df_odds_neg.sort_values(by = ['frequency'], ascending = False)
+        #df_odds_neg = df_odds_neg[df_odds_neg.frequency > 2]
+        df_odds_pos = df_odds_pos.sort_values(by = ['frequency'], ascending = False)
+        #df_odds_pos = df_odds_pos[df_odds_pos.frequency > 2]
+
+        df_odds_neg = transform_text(df_odds_neg, 'word')
+        df_odds_pos = transform_text(df_odds_pos, 'word')
+        pos_list = ['NOUN', 'VERB', 'NUM', 'PROPN', 'ADJ', 'ADV']
+        df_odds_neg['POS_tags']  = np.where(df_odds_neg.word == 'url', 'NOUN', df_odds_neg['POS_tags'])
+        df_odds_pos['POS_tags']  = np.where(df_odds_pos.word == 'url', 'NOUN', df_odds_pos['POS_tags'])
+        df_odds_neg = df_odds_neg[df_odds_neg.POS_tags.isin(pos_list)]
+        df_odds_pos = df_odds_pos[df_odds_pos.POS_tags.isin(pos_list)]
+        df_odds_neg = df_odds_neg.reset_index(drop=True)
+        df_odds_pos = df_odds_pos.reset_index(drop=True)
+
+        df_odds_neg['abusive'] = df_odds_neg.word.apply(lambda x: " ".join( set(x.lower().split()).intersection(abus_words)  ))
+        df_odds_neg['abusive'] = np.where( df_odds_neg['abusive'].fillna('').astype('str').map(len) > 1 , 'abusive', 'non-abusive' )
+        df_odds_pos['abusive'] = df_odds_pos.word.apply(lambda x: " ".join( set(x.lower().split()).intersection(abus_words)  ))
+        df_odds_pos['abusive'] = np.where( df_odds_pos['abusive'].fillna('').astype('str').map(len) > 1, 'abusive', 'non-abusive' )
+
+        df_odds_pos.index += 1
+        df_odds_neg.index += 1
+
+        if "sentence_lemmatized" in df.columns:
+            df.sentence_lemmatized = df.sentence_lemmatized.str.replace(" pyro sick ", " pyro2sick ")
+
         import nltk
-        #from nltk.collocations
-        bigram_measures = nltk.collocations.BigramAssocMeasures()
-        finder = nltk.collocations.BigramCollocationFinder.from_words(txt_df01.split(), window_size=5)
-        finder.nbest(bigram_measures.pmi, 10)
-        finder.apply_freq_filter(2)
-        results=finder.nbest(bigram_measures.pmi, 10)
-        scores = finder.score_ngrams(bigram_measures.pmi)
-        seed = "word"
-        result_term = []
-        result_pmi = []
-        for terms, score in scores:
-            if terms [0] in freq_word_pos or terms [1] in freq_word_pos:
-                if not " ".join(terms) in result_term and not str(terms [1]) + " " + str(terms [0]) in result_term:
-                    result_term.append(" ".join(terms))
-                    result_pmi.append(score)
+        oddpos_c, oddneg_c = st.columns(2, gap = 'large')
+        dimm = selected_rhet_dim.split("_")[0]
+        with oddpos_c:
+            st.write(f'Number of **{dimm} {df_odds_pos.category.iloc[0]}** words: {len(df_odds_pos)} ')
+            st.dataframe(df_odds_pos)
+            add_spacelines(1)
 
-        df_bigrams0 = pd.DataFrame({'bi-grams':result_term, 'PMI':result_pmi})
-        df_bigrams0['len1'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[0]) )
-        df_bigrams0['len2'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[-1]) )
-        df_bigrams0 = df_bigrams0[ (df_bigrams0.len1 > 2) & (df_bigrams0.len2 > 2) ]
-        df_bigrams0 = df_bigrams0[df_bigrams0.PMI > 0].reset_index(drop=True)
-        df_bigrams0.PMI = df_bigrams0.PMI.round(3)
+            pos_list_freq = df_odds_pos.word.tolist()
+            freq_word_pos = st.multiselect('Choose a word you would like to see data cases for', pos_list_freq, pos_list_freq[:4:2])
+            df_odds_pos_words = set(freq_word_pos)
+            df['markers_'+df_odds_pos.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
 
-        df_bigrams0.index += 1
-        #st.write(df_bigrams0)
+            add_spacelines(1)
+            cols_odds1 = ['source', 'sentence', 'markers_'+df_odds_pos.category.iloc[0], 'ethos_label',
+                            'emotion', 'sentiment', 'Target',
+                             ]
+            df01 = df[ (df['markers_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_pos.category.iloc[0]) ].sort_values(by = ['markers_'+df_odds_pos.category.iloc[0], 'ethos_label']).reset_index(drop = True)
+
+            txt_df01 = " ".join(df01.sentence_lemmatized.values)
+            df['mentions'] = df.sentence.apply(lambda x: " ".join( w for w in str(x).split() if "@" in w ))
+
+            df_targets = " ".join( df.mentions.dropna().str.replace("@", "").str.lower().unique() ).split()
+            t = nltk.tokenize.WhitespaceTokenizer()
+            #c = Text(t.tokenize(txt_df01))
+
+            #st.write(freq_word_pos[0], txt_df01[:50])
+            #st.write(c.concordance_list(freq_word_pos[0], width=51, lines=50))
+            # Loading Libraries
+            from nltk.collocations import TrigramCollocationFinder, BigramCollocationFinder
+            from nltk.metrics import TrigramAssocMeasures, BigramAssocMeasures
+            from nltk.corpus import stopwords
+            stopset = set(stopwords.words('english'))
+            filter_stops = lambda w: len(w) < 3 or w in stopset
+
+            def get_keyword_collocations(corpus, keyword, windowsize=10, numresults=10):
+                import string
+                from nltk.tokenize import word_tokenize
+                from nltk.collocations import BigramCollocationFinder
+                from nltk.collocations import BigramAssocMeasures
+                from nltk.corpus import stopwords
+                nltk.download('punkt')
+                #'''This function uses the Natural Language Toolkit to find collocations
+                #for a specific keyword in a corpus. It takes as an argument a string that
+                #contains the corpus you want to find collocations from. It prints the top
+                #collocations it finds for each keyword.
+                #https://github.com/ahegel/collocations/blob/master/get_collocations3.py
+                #'''
+                # convert the corpus (a string) into  a list of words
+                tokens = word_tokenize(corpus)
+                # initialize the bigram association measures object to score each collocation
+                bigram_measures = BigramAssocMeasures()
+                # initialize the bigram collocation finder object to find and rank collocations
+                finder = BigramCollocationFinder.from_words(tokens, window_size=windowsize)
+                # initialize a function that will narrow down collocates that don't contain the keyword
+                keyword_filter = lambda *w: keyword not in w
+                # apply a series of filters to narrow down the collocation results
+                ignored_words = stopwords.words('english')
+                finder.apply_word_filter(lambda w: len(w) < 2 or w.lower() in ignored_words)
+                finder.apply_freq_filter(2)
+                finder.apply_ngram_filter(keyword_filter)
+                # calculate the top results by T-score
+                # list of all possible measures: .raw_freq, .pmi, .likelihood_ratio, .chi_sq, .phi_sq, .fisher, .student_t, .mi_like, .poisson_stirling, .jaccard, .dice
+                results = finder.nbest(bigram_measures.student_t, numresults)
+                # print the results
+                print("Top collocations for ", str(keyword), ":")
+                collocations = ''
+                for k, v in results:
+                    if k != keyword:
+                        collocations += k + ' '
+                    else:
+                        collocations += v + ' '
+                #print(collocations, '\n')
+                st.write(collocations, '\n')
+
+            words_of_interest = list(freq_word_pos) # ["love", "die"]
+            import nltk
+            #from nltk.collocations
+            bigram_measures = nltk.collocations.BigramAssocMeasures()
+            finder = nltk.collocations.BigramCollocationFinder.from_words(txt_df01.split(), window_size=5)
+            finder.nbest(bigram_measures.pmi, 10)
+            finder.apply_freq_filter(2)
+            results=finder.nbest(bigram_measures.pmi, 10)
+            scores = finder.score_ngrams(bigram_measures.pmi)
+            seed = "word"
+            result_term = []
+            result_pmi = []
+            for terms, score in scores:
+                if terms [0] in freq_word_pos or terms [1] in freq_word_pos:
+                    if not " ".join(terms) in result_term and not str(terms [1]) + " " + str(terms [0]) in result_term:
+                        result_term.append(" ".join(terms))
+                        result_pmi.append(score)
+
+            df_bigrams0 = pd.DataFrame({'bi-grams':result_term, 'PMI':result_pmi})
+            df_bigrams0['len1'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[0]) )
+            df_bigrams0['len2'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[-1]) )
+            df_bigrams0 = df_bigrams0[ (df_bigrams0.len1 > 2) & (df_bigrams0.len2 > 2) ]
+            df_bigrams0 = df_bigrams0[df_bigrams0.PMI > 0].reset_index(drop=True)
+            df_bigrams0.PMI = df_bigrams0.PMI.round(3)
+
+            df_bigrams0.index += 1
+            #st.write(df_bigrams0)
 
 
-        #for word in words_of_interest:
-            #get_keyword_collocations(txt_df01, word)
+            #for word in words_of_interest:
+                #get_keyword_collocations(txt_df01, word)
 
-        st.write(f'Bi-gram collocations with **{freq_word_pos}**')
-        colBigrams = list(nltk.ngrams(t.tokenize(txt_df01), 2))
-        colBigrams2 = []
-        for p in colBigrams:
-            for w in freq_word_pos:
-                if (w == p[0] or w == p[1]) and not (p[0] in df_targets or p[1] in df_targets):
-                    colBigrams2.append(" ".join(p))
-        df_bigrams = pd.DataFrame({'bi-grams':colBigrams2})
-        df_bigrams = df_bigrams.drop_duplicates()
-        df_bigrams = df_bigrams.groupby('bi-grams', as_index=False).size()
-        df_bigrams.columns = ['bi-grams', 'frequency']
-        df_bigrams = df_bigrams.sort_values(by = 'frequency', ascending = False).reset_index(drop=True)
-        #df_bigrams = df_bigrams[df_bigrams.duplicated()].reset_index(drop=True)
-        df_bigrams.index += 1
-        df_bigrams0 = df_bigrams0.drop(columns =  ['len1', 'len2'] )
-
-
-        st.write(df_bigrams0)# df_bigrams0 df_bigrams
-
-        add_spacelines(1)
-        st.write(f'Cases with **{freq_word_pos}** words:')
-        st.dataframe(df01[cols_odds1].set_index('source'))
+            st.write(f'Bi-gram collocations with **{freq_word_pos}**')
+            colBigrams = list(nltk.ngrams(t.tokenize(txt_df01), 2))
+            colBigrams2 = []
+            for p in colBigrams:
+                for w in freq_word_pos:
+                    if (w == p[0] or w == p[1]) and not (p[0] in df_targets or p[1] in df_targets):
+                        colBigrams2.append(" ".join(p))
+            df_bigrams = pd.DataFrame({'bi-grams':colBigrams2})
+            df_bigrams = df_bigrams.drop_duplicates()
+            df_bigrams = df_bigrams.groupby('bi-grams', as_index=False).size()
+            df_bigrams.columns = ['bi-grams', 'frequency']
+            df_bigrams = df_bigrams.sort_values(by = 'frequency', ascending = False).reset_index(drop=True)
+            #df_bigrams = df_bigrams[df_bigrams.duplicated()].reset_index(drop=True)
+            df_bigrams.index += 1
+            df_bigrams0 = df_bigrams0.drop(columns =  ['len1', 'len2'] )
 
 
-    with oddneg_c:
-        st.write(f'Number of **{dimm} {df_odds_neg.category.iloc[0]}** words: {len(df_odds_neg)} ')
-        st.dataframe(df_odds_neg)
-        add_spacelines(1)
+            st.write(df_bigrams0)# df_bigrams0 df_bigrams
 
-        neg_list_freq = df_odds_neg.word.tolist()
-        freq_word_neg = st.multiselect('Choose a word you would like to see data cases for', neg_list_freq, neg_list_freq[:4:2])
-        df_odds_neg_words = set(freq_word_neg)
-        df['freq_words_'+df_odds_neg.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_neg_words) ))
-        df02 = df[ (df['freq_words_'+df_odds_neg.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_neg.category.iloc[0]) ]
-        txt_df02 = " ".join(df02.sentence_lemmatized.values)
+            add_spacelines(1)
+            st.write(f'Cases with **{freq_word_pos}** words:')
+            st.dataframe(df01[cols_odds1].drop_duplicates('sentence'))
 
-        finder = nltk.collocations.BigramCollocationFinder.from_words(txt_df02.split(), window_size=5)
-        finder.nbest(bigram_measures.pmi, 10)
-        finder.apply_freq_filter(2)
-        results=finder.nbest(bigram_measures.pmi, 10)
-        scores = finder.score_ngrams(bigram_measures.pmi)
-        seed = "word"
-        result_term = []
-        result_pmi = []
-        for terms, score in scores:
-            if terms [0] in freq_word_neg or terms [1] in freq_word_neg:
-                if not " ".join(terms) in result_term and not str(terms [1]) + " " + str(terms [0]) in result_term:
-                    result_term.append(" ".join(terms))
-                    result_pmi.append(score)
 
-        df_bigrams0 = pd.DataFrame({'bi-grams':result_term, 'PMI':result_pmi})
-        df_bigrams0['len1'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[0]) )
-        df_bigrams0['len2'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[-1]) )
-        df_bigrams0 = df_bigrams0[ (df_bigrams0.len1 > 2) & (df_bigrams0.len2 > 2) ]
-        df_bigrams0 = df_bigrams0[df_bigrams0.PMI > 0].reset_index(drop=True)
-        df_bigrams0.PMI = df_bigrams0.PMI.round(3)
-        df_bigrams0.index += 1
+        with oddneg_c:
+            st.write(f'Number of **{dimm} {df_odds_neg.category.iloc[0]}** words: {len(df_odds_neg)} ')
+            st.dataframe(df_odds_neg)
+            add_spacelines(1)
 
-        cols_odds2 = ['source', 'sentence', 'ethos_label', 'pathos_label', 'Target',
-                         'freq_words_'+df_odds_neg.category.iloc[0]]
-        add_spacelines(1)
-        st.write(f'Bi-gram collocations with **{freq_word_neg}**')
-        colBigrams = list(nltk.ngrams(t.tokenize(txt_df02), 2))
-        colBigrams2 = []
-        for p in colBigrams:
-            for w in freq_word_neg:
-                if (w == p[0] or w == p[1]) and not (p[0] in df_targets or p[1] in df_targets):
-                    colBigrams2.append(" ".join(p))
-        df_bigrams = pd.DataFrame({'bi-grams':colBigrams2})
-        df_bigrams = df_bigrams.drop_duplicates()#.reset_index(drop=True)
-        df_bigrams = df_bigrams.groupby('bi-grams', as_index=False).size()
-        df_bigrams.columns = ['bi-grams', 'frequency']
-        df_bigrams = df_bigrams.sort_values(by = 'frequency', ascending = False).reset_index(drop=True)
-        #df_bigrams = df_bigrams[df_bigrams.duplicated()].reset_index(drop=True)
-        df_bigrams.index += 1
-        df_bigrams0 = df_bigrams0.drop(columns =  ['len1', 'len2'] )
-        st.write(df_bigrams0)
+            neg_list_freq = df_odds_neg.word.tolist()
+            freq_word_neg = st.multiselect('Choose a word you would like to see data cases for', neg_list_freq, neg_list_freq[:4:2])
+            df_odds_neg_words = set(freq_word_neg)
 
-        add_spacelines(1)
-        st.write(f'Cases with **{freq_word_neg}** words:')
-        st.dataframe(df02[cols_odds2].set_index('source'))
+            df['markers_'+df_odds_neg.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_neg_words) ))
+            df02 = df[ (df['markers_'+df_odds_neg.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_neg.category.iloc[0]) ].sort_values(by = ['markers_'+df_odds_pos.category.iloc[0], 'ethos_label']).reset_index(drop = True)
 
+            txt_df02 = " ".join(df02.sentence_lemmatized.values)
+
+            finder = nltk.collocations.BigramCollocationFinder.from_words(txt_df02.split(), window_size=5)
+            finder.nbest(bigram_measures.pmi, 10)
+            finder.apply_freq_filter(2)
+            results=finder.nbest(bigram_measures.pmi, 10)
+            scores = finder.score_ngrams(bigram_measures.pmi)
+            seed = "word"
+            result_term = []
+            result_pmi = []
+            for terms, score in scores:
+                if terms [0] in freq_word_neg or terms [1] in freq_word_neg:
+                    if not " ".join(terms) in result_term and not str(terms [1]) + " " + str(terms [0]) in result_term:
+                        result_term.append(" ".join(terms))
+                        result_pmi.append(score)
+
+            df_bigrams0 = pd.DataFrame({'bi-grams':result_term, 'PMI':result_pmi})
+            df_bigrams0['len1'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[0]) )
+            df_bigrams0['len2'] = df_bigrams0['bi-grams'].astype('str').apply(lambda x: len(str(x).split()[-1]) )
+            df_bigrams0 = df_bigrams0[ (df_bigrams0.len1 > 2) & (df_bigrams0.len2 > 2) ]
+            df_bigrams0 = df_bigrams0[df_bigrams0.PMI > 0].reset_index(drop=True)
+            df_bigrams0.PMI = df_bigrams0.PMI.round(3)
+            df_bigrams0.index += 1
+
+            cols_odds2 = ['source', 'sentence',  'markers_'+df_odds_neg.category.iloc[0], 'ethos_label', 'emotion', 'sentiment', 'Target',
+                            ]
+            add_spacelines(1)
+            st.write(f'Bi-gram collocations with **{freq_word_neg}**')
+            colBigrams = list(nltk.ngrams(t.tokenize(txt_df02), 2))
+            colBigrams2 = []
+            for p in colBigrams:
+                for w in freq_word_neg:
+                    if (w == p[0] or w == p[1]) and not (p[0] in df_targets or p[1] in df_targets):
+                        colBigrams2.append(" ".join(p))
+            df_bigrams = pd.DataFrame({'bi-grams':colBigrams2})
+            df_bigrams = df_bigrams.drop_duplicates()#.reset_index(drop=True)
+            df_bigrams = df_bigrams.groupby('bi-grams', as_index=False).size()
+            df_bigrams.columns = ['bi-grams', 'frequency']
+            df_bigrams = df_bigrams.sort_values(by = 'frequency', ascending = False).reset_index(drop=True)
+            #df_bigrams = df_bigrams[df_bigrams.duplicated()].reset_index(drop=True)
+            df_bigrams.index += 1
+            df_bigrams0 = df_bigrams0.drop(columns =  ['len1', 'len2'] )
+            st.write(df_bigrams0)
+
+            add_spacelines(1)
+            st.write(f'Cases with **{freq_word_neg}** words:')
+            st.dataframe(df02[cols_odds2].drop_duplicates('sentence'))
+
+
+
+    with tab_explore:
+        st.write('### Explore corpora')
+        markers_list = df_odds_pos.word.tolist()
+        markers_list.extend( df_odds_neg.word.tolist() )
+        df['markers'] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(markers_list) ))
+        df['markers'] = np.where(df['markers'] == '', 'nan', df['markers'])
+
+        dff_columns = ['sentence', 'source', 'ethos','sentiment', 'emotion', 'Target', 'markers', 'markers_'+df_odds_neg.category.iloc[0], 'markers_'+df_odds_pos.category.iloc[0]]# , 'conversation_id','date'
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        if not 'neutral' in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+
+        df = df.rename(columns = {'ethos_label':'ethos'})
+
+        dff = df.copy()
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[1:3])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (set(dff[select_columns[n]].unique())), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
 
 
 
@@ -2561,11 +2663,11 @@ def FreqTablesLog(df_list, rhetoric_dims = ['ethos', 'logos']):
         pos_list_freq = df_odds_pos.word.tolist()
         freq_word_pos = st.multiselect('Choose a word you would like to see data cases for', pos_list_freq, pos_list_freq[:4:2])
         df_odds_pos_words = set(freq_word_pos)
-        df['freq_words_'+df_odds_pos.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
+        df['markers_'+df_odds_pos.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
 
         add_spacelines(1)
 
-        df01 = df[ (df['freq_words_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_pos.category.iloc[0]) ]
+        df01 = df[ (df['markers_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_pos.category.iloc[0]) ]
         txt_df01 = " ".join(df01.sentence_lemmatized.values)
         df['mentions'] = df.sentence.apply(lambda x: " ".join( w for w in str(x).split() if "@" in w ))
 
@@ -2630,8 +2732,8 @@ def FreqTablesLog(df_list, rhetoric_dims = ['ethos', 'logos']):
         neg_list_freq = df_odds_neg.word.tolist()
         freq_word_neg = st.multiselect('Choose a word you would like to see data cases for', neg_list_freq, neg_list_freq[:4:2])
         df_odds_neg_words = set(freq_word_neg)
-        df['freq_words_'+df_odds_neg.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_neg_words) ))
-        df02 = df[ (df['freq_words_'+df_odds_neg.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_neg.category.iloc[0]) ]
+        df['markers_'+df_odds_neg.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_neg_words) ))
+        df02 = df[ (df['markers_'+df_odds_neg.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_neg.category.iloc[0]) ]
         txt_df02 = " ".join(df02.sentence_lemmatized.values)
 
         finder = nltk.collocations.BigramCollocationFinder.from_words(txt_df02.split(), window_size=5)
@@ -2690,6 +2792,29 @@ def OddsRatio(df_list):
     add_spacelines(1)
     df = df_list[0]
     df = df.drop_duplicates(subset = ['source', 'sentence'])
+
+    contents_radio_heroes = st.radio("Category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
+    df.Target = df.Target.astype('str')
+    df['sentence'] = df.sentence.astype('str').str.replace("amp;", "")
+
+    if contents_radio_heroes == "direct ethos":
+        targets_limit = df['Target'].dropna().unique()
+        targets_limit = [t for t in targets_limit if "@" in t]
+        targets_limit.append('nan')
+        df = df[df.Target.isin(targets_limit)]
+        if len(targets_limit) < 2:
+            st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+            st.stop()
+
+    elif contents_radio_heroes == "3rd party ethos":
+        targets_limit = df['Target'].dropna().unique()
+        targets_limit = [t for t in targets_limit if not "@" in t]
+        targets_limit.append('nan')
+        df = df[df.Target.isin(targets_limit)]
+        if len(targets_limit) < 2:
+            st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+            st.stop()
+
     df['mentions'] = df.sentence.apply(lambda x: " ".join( w for w in str(x).split() if '@' in w ))
     df['sentence_lemmatized'] = df.sentence.apply(lambda x: " ".join( str(w).replace("#", "") for w in str(x).split() if not '@' in w ))
     df = lemmatization(df, 'sentence_lemmatized')
@@ -2760,17 +2885,17 @@ def OddsRatio(df_list):
 
             if odds > 1:
 
-                if g2 > 10.83:
+                if g2 >= 10.83:
                     #print(f"{dim, g2, odds} ***p < 0.001 ")
                     dict_1vsall_percent[dim] = odds
                     dict_1vsall_effect_size[dim] = 0.001
                     dict_1vsall_freq[dim] = a
-                elif g2 > 6.63:
+                elif g2 >= 6.63:
                     #print(f"{dim, g2, odds} **p < 0.01 ")
                     dict_1vsall_percent[dim] = odds
                     dict_1vsall_effect_size[dim] = 0.01
                     dict_1vsall_freq[dim] = a
-                elif g2 > 3.84:
+                elif g2 >= 3.84:
                     #print(f"{dim, g2, odds} *p < 0.05 ")
                     dict_1vsall_percent[dim] = odds
                     dict_1vsall_effect_size[dim] = 0.05
@@ -2842,7 +2967,36 @@ def OddsRatio(df_list):
     df_odds_neg_abs = df_odds_neg_abs.reset_index()
     df_odds_neg_abs.columns = ['abusive', 'percentage']
 
-    tab_odd, tab_pos, tab_abuse = st.tabs(['Odds', 'POS', 'Abusiveness'])
+    tab_odd, tab_pos, tab_abuse, c_explore = st.tabs(['Odds', 'POS', 'Abusiveness', 'Explore Corpora'])
+
+    with c_explore:
+        df['abusive_words'] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.lower().split()).intersection(abus_words)  ))
+        df['abusive'] = np.where( df.abusive_words.str.split().map(len) >= 1, 1, 0 )
+        st.write('### Explore corpora')
+        dff_columns = [ 'source', 'sentence', 'ethos_label', 'emotion', 'sentiment', 'abusive', 'Target' ]# , 'conversation_id','date', 'pathos_label'
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        if not 'neutral' in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+        dff = df.copy()
+        dff['sentence'] = dff['sentence'].astype('str').str.replace('amp;', '')
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[-4:-2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
+
+
     with tab_odd:
         oddpos_c, oddneg_c = st.columns(2, gap = 'large')
         cols_odds = ['source', 'sentence', 'ethos_label', 'pathos_label', 'Target',
@@ -2857,10 +3011,12 @@ def OddsRatio(df_list):
             freq_word_pos = st.multiselect('Choose a word you would like to see data cases for', pos_list_freq, pos_list_freq[:4:2])
             df_odds_pos_words = set(freq_word_pos)
             df['odds_words_'+df_odds_pos.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
-            df01 = df[ (df['odds_words_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_pos.category.iloc[0]) ]
+            #df01 = df[ (df['odds_words_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_pos.category.iloc[0]) ]
+            df01 = df[ (df['odds_words_'+df_odds_pos.category.iloc[0]].str.split().map(len) >= 1) ]
+
             st.write(f'Cases with **{freq_word_pos}** words:')
-            cols = ['source', 'sentence', 'ethos_label', 'Target', 'odds_words_'+df_odds_pos.category.iloc[0]]
-            st.dataframe(df01[cols].set_index('source'))
+            cols = ['source', 'sentence', 'ethos_label', 'odds_words_'+df_odds_pos.category.iloc[0], 'Target', 'sentiment', 'emotion']
+            st.dataframe(df01[cols].sort_values(by = ['odds_words_'+df_odds_pos.category.iloc[0], selected_rhet_dim] ).reset_index(drop=True))
             #st.dataframe(df_odds_pos_tags_summ)
             add_spacelines(1)
             #st.write(f'Cases with **{df_odds_pos.category.iloc[0]}** words:')
@@ -2876,9 +3032,9 @@ def OddsRatio(df_list):
             df_odds_neg_words = set(freq_word_neg)
             df['odds_words_'+df_odds_neg.category.iloc[0]] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_neg_words) ))
             df01 = df[ (df['odds_words_'+df_odds_neg.category.iloc[0]].str.split().map(len) >= 1) & (df[selected_rhet_dim] == df_odds_neg.category.iloc[0]) ]
-            cols = ['source', 'sentence', 'ethos_label', 'Target', 'odds_words_'+df_odds_neg.category.iloc[0]]
+            cols = ['source', 'sentence', 'ethos_label', 'odds_words_'+df_odds_neg.category.iloc[0], 'Target', 'sentiment', 'emotion']
             st.write(f'Cases with **{freq_word_neg}** words:')
-            st.dataframe(df01[cols].set_index('source'))
+            st.dataframe(df01[cols].sort_values(by = ['odds_words_'+df_odds_neg.category.iloc[0], selected_rhet_dim] ).reset_index(drop=True))
             #st.dataframe(df_odds_neg_tags_summ)
             add_spacelines(1)
             #st.write(f'Cases with **{df_odds_neg.category.iloc[0]}** words:')
@@ -3628,23 +3784,23 @@ def generateWordCloud_sub_log(df_list,
 
 
     cols_odds1 = ['source', 'sentence', 'ethos_label', 'pathos_label', 'Target',
-                         'freq_words_'+label_cloud]
+                         'markers_'+label_cloud]
 
     if selected_rhet_dim == 'logos':
         df = df.rename(columns = {'connection':'logos'})
-        #cols_odds1 = ['locution_conclusion', 'locution_premise', 'logos', 'argument_linked', 'freq_words_'+label_cloud]
-        cols_odds1 = ['premise', 'conclusion', 'sentence_lemmatized', 'logos', 'freq_words_'+label_cloud]
+        #cols_odds1 = ['locution_conclusion', 'locution_premise', 'logos', 'argument_linked', 'markers_'+label_cloud]
+        cols_odds1 = ['premise', 'conclusion', 'sentence_lemmatized', 'logos', 'markers_'+label_cloud]
         df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str')
         df['logos'] = df['logos'].map({'Default Inference':'support', 'Default Conflict':'attack'})
 
     pos_list_freq = df_cloud_words1.word.tolist()
     freq_word_pos = st.multiselect('Choose word(s) you would like to see data cases for', pos_list_freq, pos_list_freq[:2])
     df_odds_pos_words = set(freq_word_pos)
-    df['freq_words_'+label_cloud] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
+    df['markers_'+label_cloud] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
     #st.write(df)
     add_spacelines(1)
     st.write(f'Cases with **{freq_word_pos}** words:')
-    st.dataframe(df[ (df['freq_words_'+label_cloud].str.split().map(len) >= 1) & (df[selected_rhet_dim] == label_cloud) ][cols_odds1])# .set_index('source')
+    st.dataframe(df[ (df['markers_'+label_cloud].str.split().map(len) >= 1) & (df[selected_rhet_dim] == label_cloud) ][cols_odds1])# .set_index('source')
 
 
 
@@ -3673,6 +3829,32 @@ def generateWordCloud(df_list, rhetoric_dims = ['ethos', 'ethos & emotion'], an_
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label")
 
     add_spacelines(1)
+
+    contents_radio_heroes = st.radio("Category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
+    df.Target = df.Target.astype('str')
+    df['sentence'] = df.sentence.astype('str').str.replace("amp;", "")
+
+    if contents_radio_heroes == "direct ethos":
+        targets_limit = df['Target'].dropna().unique()
+        targets_limit = [t for t in targets_limit if "@" in t]
+        targets_limit.append('nan')
+
+        df = df[df.Target.isin(targets_limit)]
+        if len(targets_limit) < 2:
+            st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+            st.stop()
+    elif contents_radio_heroes == "3rd party ethos":
+        targets_limit = df['Target'].dropna().unique()
+        targets_limit = [t for t in targets_limit if not "@" in t]
+        targets_limit.append('nan')
+
+        df = df[df.Target.isin(targets_limit)]
+        if len(targets_limit) < 2:
+            st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+            st.stop()
+
+    add_spacelines(1)
+
     threshold_cloud = st.slider('Select a precision value (threshold) for words in WordCloud', 0, 100, 80)
     st.info(f'Selected precision: **{threshold_cloud}**')
 
@@ -3773,28 +3955,28 @@ def generateWordCloud(df_list, rhetoric_dims = ['ethos', 'ethos & emotion'], an_
     st.write(df_cloud_words1)
 
 
-    cols_odds1 = ['source', 'sentence', 'ethos_label', 'pathos_label', 'Target',
-                         'freq_words_'+label_cloud]
+    cols_odds1 = ['source', 'sentence', 'markers_'+label_cloud, 'ethos_label', 'emotion', 'Target', 'sentiment',
+                         ]
 
     if selected_rhet_dim == 'logos':
         df = df.rename(columns = {'connection':'logos'})
-        #cols_odds1 = ['locution_conclusion', 'locution_premise', 'logos', 'argument_linked', 'freq_words_'+label_cloud]
-        cols_odds1 = ['premise', 'conclusion', 'sentence_lemmatized', 'logos', 'freq_words_'+label_cloud]
+        #cols_odds1 = ['locution_conclusion', 'locution_premise', 'logos', 'argument_linked', 'markers_'+label_cloud]
+        cols_odds1 = ['premise', 'conclusion', 'sentence_lemmatized', 'logos', 'markers_'+label_cloud]
         df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str')
         df['logos'] = df['logos'].map({'Default Inference':'support', 'Default Conflict':'attack'})
 
     pos_list_freq = df_cloud_words1.word.tolist()
     freq_word_pos = st.multiselect('Choose word(s) you would like to see data cases for', pos_list_freq, pos_list_freq[:2])
     df_odds_pos_words = set(freq_word_pos)
-    df['freq_words_'+label_cloud] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
+    df['markers_'+label_cloud] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
     #st.write(df)
     add_spacelines(1)
     st.write(f'Cases with **{freq_word_pos}** words:')
 
     if (selected_rhet_dim == 'ethos_label & emotion'):
-        st.dataframe(df[ (df['freq_words_'+label_cloud].str.split().map(len) >= 1) & (df['ethos_label'] == label_cloud) ][cols_odds1])# .set_index('source')
+        st.dataframe(df[ (df['markers_'+label_cloud].str.split().map(len) >= 1)  ][cols_odds1].sort_values(by = ['markers_'+label_cloud, 'ethos_label'] ).drop_duplicates('sentence') )# .set_index('source')
     else:
-        st.dataframe(df[ (df['freq_words_'+label_cloud].str.split().map(len) >= 1) & (df[selected_rhet_dim] == label_cloud) ][cols_odds1])# .set_index('source')
+        st.dataframe(df[ (df['markers_'+label_cloud].str.split().map(len) >= 1) & (df[selected_rhet_dim] == label_cloud) ][cols_odds1].sort_values(by = ['markers_'+label_cloud, 'ethos_label'] ).drop_duplicates('sentence') )# .set_index('source')
 
 
 
@@ -3947,7 +4129,7 @@ def ProfilesEntity_compare(data_list, selected_rhet_dim):
 
         #st.write(dd2_size_2[dd2_size_2['profile'] == 'other'])
         fig_pr = sns.catplot(kind = 'bar', data = dd2_size_2_pr, x = 'percentage', y = 'profile',
-                aspect = 1.65, palette = plt2, legend = False )
+                aspect = 1.65, palette = plt2)
         titl_fig = selected_rhet_dim.replace('_label', '')
         fig_pr.set(title = f'{titl_fig.capitalize()} profiles in {ds}', xlim = (0,100), xticks = np.arange(0, 100, 15))
         st.pyplot(fig_pr)
@@ -4201,7 +4383,7 @@ def TargetHeroScores_compare(data_list, singl_an = True):
                     x = 'corpus')
     f_dist_ethoshist.set(xlabel = '', title = 'Distribution of (anti)-hero scores')
 
-    heroes_tab1, heroes_tab2, heroes_tab3 = st.tabs(['(Anti)-heroes Plots', '(Anti)-heroes Tables', '(Anti)-heroes Single Target Analysis'])
+    heroes_tab1, heroes_tab2, heroes_tab3, heroes_tab_explore = st.tabs(['(Anti)-heroes Plots', '(Anti)-heroes Tables', '(Anti)-heroes Single Target Analysis', 'Explore Corpora'])
     with heroes_tab1:
         add_spacelines(1)
         st.pyplot(f_dist_ethos)
@@ -4287,39 +4469,79 @@ def TargetHeroScores_compare(data_list, singl_an = True):
 
 
     with heroes_tab2:
+        add_spacelines()
+        st.write( "##### Table: summary of hero and anti-hero scores" )
         cops_names = df_dist_hist_all.corpus.unique()
         cols_columns = st.columns(len(cops_names))
         for n, c in enumerate(cols_columns):
             with c:
                 df_dist_hist_all_0 = df_dist_hist_all[df_dist_hist_all.corpus == cops_names[n]]
-                add_spacelines(1)
+
+                def highlight(s):
+                    if s.score < 0:
+                        return ['background-color: red'] * len(s)
+                    elif s.score > 0:
+                        return ['background-color: green'] * len(s)
+                    else:
+                        return ['background-color: white'] * len(s)
 
                 def colorred(s):
-                    if s < 0:
-                        return 'background-color: red'
-                    elif s > 0:
-                        return 'background-color: green'
+                    if s.label == 'anti-heroes':
+                        return ['background-color: red'] * len(s)
+                    elif s.label == 'heroes':
+                        return ['background-color: green'] * len(s)
                     else:
-                        return 'background-color: white'
+                        return ['background-color: white'] * len(s)
 
-                st.write(f"##### {cops_names[n]} ")
-                df_dist_hist_all_0 = df_dist_hist_all_0.sort_values(by = 'score')
+                #st.write(cops_names[n])
+                df_dist_hist_all_0 = df_dist_hist_all_0.sort_values(by = 'score', ascending=False)
                 df_dist_hist_all_0 = df_dist_hist_all_0.reset_index(drop=True)
                 df_dist_hist_all_0 = df_dist_hist_all_0.set_index('Target').reset_index()
                 df_dist_hist_all_0.index += 1
-                #df_dist_hist_all_0['score'] = df_dist_hist_all_0['score'].style.applymap(lambda x: "background-color: red" if x > 0 else "background-color: white")
-                st.write(df_dist_hist_all_0.style.applymap(colorred, subset=['score']))
+
+                st.write( pd.DataFrame(df_dist_hist_all_0.label.value_counts()).reset_index().style.apply( colorred, axis=1 ) )
+
+                st.write(df_dist_hist_all_0.style.apply( highlight, axis=1 ))
+
                 df_dist_hist_all_0.Target = df_dist_hist_all_0.Target.apply(lambda x: "_".join(x.split()))
 
+                add_spacelines(1)
+                st.write( "##### Cloud: names of heroes and anti-heroes" )
                 f_att0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'anti-heroes'].Target.values), 800, 500, '#1E1E1E', 'Reds')
                 f_sup0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'heroes'].Target.values), 800, 500, '#1E1E1E', 'Greens')
 
-                add_spacelines(1)
-                st.write(f" **Anti-heroes** ")
-                st.pyplot(f_att0)
-                add_spacelines(2)
-                st.write(f" **Heroes** ")
                 st.pyplot(f_sup0)
+                add_spacelines(2)
+                st.pyplot(f_att0)
+
+    with heroes_tab_explore:
+        st.write('### Explore corpora')
+
+        df.Target = df.Target.astype('str')
+        df['(anti)-hero label'] = np.where(df.Target.isin(df_dist_hist_all_0[df_dist_hist_all_0.label == 'heroes'].Target.tolist() ), 'hero', 'neutral')
+        df['(anti)-hero label'] = np.where(df.Target.isin(df_dist_hist_all_0[df_dist_hist_all_0.label == 'anti-heroes'].Target.tolist() ), 'anti-hero', df['(anti)-hero label'])
+
+        dff_columns = ['sentence', 'source', '(anti)-hero label', 'ethos_label', 'sentiment', 'emotion', 'Target',]# , 'conversation_id','date'
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+
+
+        dff = df.copy()
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
 
 
 
@@ -4907,12 +5129,12 @@ def distribution_plot_compare_logos(data_list, an_type):
 
 
 
-colors_old= {'joy' : '#8DF903', 'anger' : '#FD7E00', 'sadness' : '#CA00B9',
-          'fear' : '#000000', 'disgust' :'#840079', 'no sentiment' : '#2002B5','surprise' : '#E1CA01',
+colors= {'joy' : '#8DF903', 'anger' : '#FD7E00', 'sadness' : '#CA00B9',
+          'fear' : '#000000', 'disgust' :'#15B3AF', 'no sentiment' : '#2002B5','surprise' : '#E1CA01',
           'positive':'#097604', 'negative':'#9B0101', 'neutral':'#2002B5',
           'contains_emotion':'#B10156', 'no_emotion':'#2002B5',
           'support':'#097604', 'attack':'#9B0101'}
-colors = {'anger' : '#BA0A0A', 'surprise': '#BAB50A', 'disgust': '#520ABA',
+colors_new = {'anger' : '#BA0A0A', 'surprise': '#BAB50A', 'disgust': '#520ABA',
           'sadness': '#03BDB4', 'joy': '#1CAF02', 'fear': '#0A0B0B',
           'no sentiment' : '#2002B5', 'positive':'#097604', 'negative':'#9B0101', 'neutral':'#949494',
           'contains_emotion':'#B10156', 'no_emotion':'#2002B5',
@@ -4922,7 +5144,7 @@ colors = {'anger' : '#BA0A0A', 'surprise': '#BAB50A', 'disgust': '#520ABA',
 
 
 #plotly
-def distribution_plot_compareX_sub_crossPlotly(data_list0, an_unit, dim1, dim2):
+def distribution_plot_compareX_sub_crossPlotly(data_list0, an_unit, dim1, dim2, target_type = 'both'):
     if 'label' in dim1:
         dim10 = dim1.split("_")[0]
     else:
@@ -4940,6 +5162,24 @@ def distribution_plot_compareX_sub_crossPlotly(data_list0, an_unit, dim1, dim2):
         n = 0
         for data in data_list0:
             df = data.copy()
+
+            if target_type == "direct ethos":
+                targets_limit = df['Target'].dropna().unique()
+                targets_limit = [t for t in targets_limit if "@" in t]
+                targets_limit.append('nan')
+                df = df[df.Target.isin(targets_limit)]
+                if len(targets_limit) < 1:
+                    st.error(f'No cases of **{target_type}** found in the chosen corpora.')
+                    st.stop()
+            elif target_type == "3rd party ethos":
+                targets_limit = df['Target'].dropna().unique()
+                targets_limit = [t for t in targets_limit if not "@" in t]
+                targets_limit.append('nan')
+                df = df[df.Target.isin(targets_limit)]
+                if len(targets_limit) < 1:
+                    st.error(f'No cases of **{target_type}** found in the chosen corpora.')
+                    st.stop()
+
             ds = df['corpus'].iloc[0]
 
             if not 'attack' in df['ethos_label'].unique():
@@ -4998,7 +5238,7 @@ def distribution_plot_compareX_sub_crossPlotly(data_list0, an_unit, dim1, dim2):
 
 
 
-def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2):
+def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target_type = 'both'):
     if 'label' in dim1:
         dim10 = dim1.split("_")[0]
     else:
@@ -5012,10 +5252,30 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2):
     if len(data_list0) == 1:
         add_spacelines(1)
         up_data_dict = {}
+        up_data_dict_neu = {}
+
         up_data_dict2 = {}
         n = 0
         for data in data_list0:
             df = data.copy()
+
+            if target_type == "direct ethos":
+                targets_limit = df['Target'].dropna().unique()
+                targets_limit = [t for t in targets_limit if "@" in t]
+                targets_limit.append('nan')
+                df = df[df.Target.isin(targets_limit)]
+                if len(targets_limit) < 1:
+                    st.error(f'No cases of **{target_type}** found in the chosen corpora.')
+                    st.stop()
+            elif target_type == "3rd party ethos":
+                targets_limit = df['Target'].dropna().unique()
+                targets_limit = [t for t in targets_limit if not "@" in t]
+                targets_limit.append('nan')
+                df = df[df.Target.isin(targets_limit)]
+                if len(targets_limit) < 1:
+                    st.error(f'No cases of **{target_type}** found in the chosen corpora.')
+                    st.stop()
+
             ds = df['corpus'].iloc[0]
 
             if not 'attack' in df['ethos_label'].unique():
@@ -5029,7 +5289,10 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2):
 
             else:
                 col_unit = 'percentage'
-                df_dist_ethos = pd.DataFrame(df.groupby([dim1])[dim2].value_counts(normalize = True).round(2)*100)
+                df_dist_ethos = pd.DataFrame(df.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
+                df_dist_ethos_neu = df[ (df[dim2] != 'neutral') & (df[dim1] != 'neutral') ]
+                #st.write( pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(2)*100) )
+                df_dist_ethos_neu = pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
 
 
             df_dist_ethos.columns = [col_unit]
@@ -5039,6 +5302,13 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2):
             up_data_dict[n] = df_dist_ethos
             df_dist_ethos['corpora'] = ds
 
+            df_dist_ethos_neu.columns = [col_unit]
+            df_dist_ethos_neu.reset_index(inplace=True)
+            df_dist_ethos_neu.columns = [dim10, dim20, col_unit]
+            df_dist_ethos_neu = df_dist_ethos_neu.sort_values(by = dim10)
+            up_data_dict_neu[n] = df_dist_ethos_neu
+            df_dist_ethos_neu['corpora'] = ds
+
             n += 1
 
         df_dist_ethos_all = up_data_dict[0].copy()
@@ -5046,29 +5316,41 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2):
             k_sub = k+1
             df_dist_ethos_all = pd.concat([df_dist_ethos_all, up_data_dict[k_sub]], axis=0, ignore_index=True)
 
-        sns.set(font_scale=1.2, style='whitegrid')
+        df_dist_ethos_all_neu = up_data_dict_neu[0].copy()
+        for k in range(int(len(up_data_dict_neu.keys()))-1):
+            k_sub = k+1
+            df_dist_ethos_all_neu = pd.concat([df_dist_ethos_all_neu, up_data_dict_neu[k_sub]], axis=0, ignore_index=True)
+
+
+        sns.set(font_scale=1.4, style='whitegrid')
+
         maxval = df_dist_ethos_all[col_unit].max()
+        #st.write(df_dist_ethos_all)
         fg1=sns.catplot(kind='bar', data=df_dist_ethos_all, y = dim10, x = col_unit,
-                        hue=dim20, dodge=True, palette = colors, legend = True )
+                        hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.15 )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
-            plt.xticks(np.arange(0, 100, 10))
+            plt.xticks(np.arange(0, 101, 10))
         else:
             plt.xlim(0, maxval+111)
             plt.xticks(np.arange(0, maxval+111, 100))
         plt.title(f'{dim10.capitalize()} x {dim20.capitalize()}')
+        fg1_tb1 = df_dist_ethos_all.set_index(dim10)#.drop('corpora')
 
-        fg2=sns.catplot(kind='bar', data=df_dist_ethos_all, y = dim20, x = col_unit,
-                        hue=dim10, dodge=True, palette = colors)
+
+        sns.set(font_scale=1.5, style='whitegrid')
+        fg2=sns.catplot(kind='bar', data=df_dist_ethos_all_neu, y = dim10, x = col_unit,
+                        hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.2)
         if col_unit == 'percentage':
             plt.xlim(0, 100)
-            plt.xticks(np.arange(0, 100, 10))
-        else:
-            plt.xlim(0, maxval+111)
-            plt.xticks(np.arange(0, maxval+111, 100))
-        plt.title(f'{dim20.capitalize()} x {dim10.capitalize()}')
+            plt.xticks(np.arange(0, 101, 10))
 
-        return fg1, fg2
+        plt.title(f'{dim10.capitalize()} x {dim20.capitalize()}')
+        fg2_tb1 = df_dist_ethos_all_neu.set_index(dim10)#.drop('corpora')
+
+        #st.write(df_dist_ethos_all.groupby([dim10, dim20]).percentage.mean().round(2), df_dist_ethos_all_neu.groupby([dim10, dim20]).percentage.mean().round(2))
+        return fg1, fg2, fg1_tb1, fg2_tb1
+
 
     else:
         st.info("Function not supported for multiple corpora comparison.")
@@ -5076,7 +5358,7 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2):
 
 
 
-def distribution_plot_compareX_sub_single(data_list0, an_unit, dim1):
+def distribution_plot_compareX_sub_single(data_list0, an_unit, dim1, target_type = 'both'):
     if 'label' in dim1:
         dim0 = dim1.split("_")[0]
     else:
@@ -5087,6 +5369,26 @@ def distribution_plot_compareX_sub_single(data_list0, an_unit, dim1):
     n = 0
     for data in data_list0:
         df = data.copy()
+        df["Target"] = df["Target"].astype('str')
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+
+        if target_type == "direct ethos":
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            targets_limit.append('nan')
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 1:
+                st.error(f'No cases of **{target_type}** found in the chosen corpora.')
+                st.stop()
+        elif target_type == "3rd party ethos":
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            targets_limit.append('nan')
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 1:
+                st.error(f'No cases of **{target_type}** found in the chosen corpora.')
+                st.stop()
+
         ds = str(df['corpus'].iloc[0])
         #st.dataframe(df)
         if not 'attack' in df['ethos_label'].unique():
@@ -5195,15 +5497,17 @@ def distribution_plot_compareX_sub_single(data_list0, an_unit, dim1):
 
 def distribution_plot_compareX(data_list):
     st.write("### Distribution")
-    add_spacelines(2)
+    add_spacelines(1)
     contents_radio_unit = st.radio("Unit of analysis", ("percentage", "number"))
+
+    contents_radio_targs = st.radio("Category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
 
 
     add_spacelines(1)
-    c1, c3, c2, c5, c4 = st.tabs(['Ethos', 'Sentiment', 'Emotion', "Ethos x Sentiment", "Ethos x Emotion"])
+    c1, c3, c2, c5, c4, c_explore = st.tabs(['Ethos', 'Sentiment', 'Emotion', "Ethos x Sentiment", "Ethos x Emotion", 'Explore Corpora'])
     with c1:
         f_dist_0, f_dist_1, f_dist_2 = distribution_plot_compareX_sub_single(data_list0 = data_list,
-                                    an_unit = contents_radio_unit, dim1 = 'ethos_label')
+                                    an_unit = contents_radio_unit, dim1 = 'ethos_label', target_type = contents_radio_targs )
         add_spacelines(1)
         st.pyplot(f_dist_0)
         add_spacelines(1)
@@ -5214,7 +5518,7 @@ def distribution_plot_compareX(data_list):
 
     with c3:
         f_dist_0, f_dist_1, f_dist_2 = distribution_plot_compareX_sub_single(data_list0 = data_list,
-                                    an_unit = contents_radio_unit, dim1 = 'sentiment')
+                                    an_unit = contents_radio_unit, dim1 = 'sentiment', target_type = contents_radio_targs)
         add_spacelines(1)
         st.pyplot(f_dist_0)
         add_spacelines(1)
@@ -5225,7 +5529,7 @@ def distribution_plot_compareX(data_list):
 
     with c2:
         f_dist_0, f_dist_1, f_dist_2 = distribution_plot_compareX_sub_single(data_list0 = data_list,
-                                    an_unit = contents_radio_unit, dim1 = 'emotion')
+                                    an_unit = contents_radio_unit, dim1 = 'emotion', target_type = contents_radio_targs)
         add_spacelines(1)
         st.pyplot(f_dist_0)
         add_spacelines(1)
@@ -5237,34 +5541,86 @@ def distribution_plot_compareX(data_list):
 
     with c5:
         if len(data_list) == 1:
-            fg1x, fg2x = distribution_plot_compareX_sub_cross(data_list0 = data_list,
-                        an_unit = contents_radio_unit, dim1 = 'ethos_label', dim2 = 'sentiment')
+            # fg1, fg2, fg1_tb1, fg2_tb1
+            fg1x, fg1x2, tb1x, tb1x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+                        an_unit = contents_radio_unit, dim1 = 'ethos_label', dim2 = 'sentiment', target_type = contents_radio_targs)
+
+            fg2x, fg2x2, tb2x, tb2x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+                        an_unit = contents_radio_unit, dim1 = 'sentiment', dim2 = 'ethos_label', target_type = contents_radio_targs)
             ff1, ff2, = st.columns(2)
             with ff1:
                 st.pyplot(fg1x)
+                st.write(tb1x)
+                add_spacelines(1)
+
+                st.write("#### Without a 'neutral' category ")
+                st.pyplot(fg1x2)
+                st.write(tb1x2)
                 #st.plotly_chart(fg1x)
             with ff2:
                 st.pyplot(fg2x)
+                st.write(tb2x)
+                add_spacelines(4)
+
+                st.pyplot(fg2x2)
+                st.write(tb2x2)
                 #st.plotly_chart(fg2x)
 
     with c4:
         if len(data_list) == 1:
-            fg1x, fg2x = distribution_plot_compareX_sub_cross(data_list0 = data_list,
-                        an_unit = contents_radio_unit, dim1 = 'ethos_label', dim2 = 'emotion')
+            fg1x, fg1x2, tb1x, tb1x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+                        an_unit = contents_radio_unit, dim1 = 'ethos_label', dim2 = 'emotion', target_type = contents_radio_targs)
+
+            fg2x, fg2x2, tb2x, tb2x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+                        an_unit = contents_radio_unit, dim1 = 'emotion', dim2 = 'ethos_label', target_type = contents_radio_targs)
             ff1, ff2, = st.columns(2)
             with ff1:
                 st.pyplot(fg1x)
+                st.write(tb1x)
+                add_spacelines(1)
+                st.write("#### Without a 'neutral' category ")
+
+                st.pyplot(fg1x2)
+                st.write(tb1x2)
                 #st.plotly_chart(fg1x)
             with ff2:
                 st.pyplot(fg2x)
-                #st.plotly_chart(fg2x)
+                st.write(tb2x)
+                add_spacelines(4)
 
+                st.pyplot(fg2x2)
+                st.write(tb2x2)
+                #st.plotly_chart(fg2x)
 
         else:
             add_spacelines(2)
             st.info("Function not supported for multiple corpora comparison.")
 
+    with c_explore:
+        df = pd.concat( df_list, axis = 0, ignore_index = True )
+        st.write('### Explore corpora')
+        dff_columns = [ 'sentence', 'source', 'ethos_label', 'emotion', 'sentiment', 'Target' ]# , 'conversation_id','date', 'pathos_label'
 
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        if not 'neutral' in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+        dff = df.copy()
+        dff['sentence'] = dff['sentence'].astype('str').str.replace('amp;', '')
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[-4:-2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
 
 
 def distribution_plot_compare(data_list):
@@ -5513,7 +5869,7 @@ def distribution_plot_compare(data_list):
 import time
 
 ##################### page config  #####################
-st.set_page_config(page_title="Analytics", layout="centered") # centered wide
+st.set_page_config(page_title="EthEAn Analytics", layout="centered") # centered wide
 
 
 
@@ -5684,7 +6040,7 @@ with st.sidebar:
 
         elif contents_radio_type == 'Single Corpus':
             add_spacelines(1)
-            st.write('Choose corpora')
+            st.write('Corpora Aspect')
             bool1 = False
             bool2 = False
             bool3 = False
@@ -5694,7 +6050,7 @@ with st.sidebar:
             if 'boxTopic' not in st.session_state and "boxPlatform" not in st.session_state:
                 st.session_state['boxTopic'] = False
                 st.session_state['boxPlatform'] = False
-                
+
             box_topic = st.checkbox("Topic-based", disabled=st.session_state.boxPlatform, key="boxTopic")
             box_platform = st.checkbox("Platform-based", disabled=st.session_state.boxTopic, key="boxPlatform")
 
@@ -5902,7 +6258,7 @@ with st.sidebar:
                 contents_radio3 = st.radio("Analytics", ['(Anti)-heroes',  "Profiles", "Fellows-Devils", ]) # "Polarising Tendency" "Rhetoric Strategies",
             else:
                 contents_radio3 = st.radio("Analytics", ("Corpora Summary", 'Distribution', 'WordCloud', 'Frequency Tables',
-                                            'Odds ratio', 'Pronouns', 'Explore corpora'))
+                                            'Odds ratio', 'Pronouns')) # , 'Explore corpora'
             #add_spacelines(1)
 
     if not contents_radio_rhetoric_category_ethos and contents_radio_rhetoric_category_logos:
@@ -6667,7 +7023,7 @@ elif contents_radio_type == 'Single Corpus' and contents_radio3 == 'Explore corp
     for i, k in enumerate(dict_cond.keys()):
         dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
     add_spacelines(2)
-    st.dataframe(dff_selected[dff_columns].set_index("source"), width = None)
+    st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
     st.write(f"No. of cases: {len(dff_selected)}.")
 
 
@@ -6678,9 +7034,6 @@ elif contents_radio_type in ['Compare Corpora', 'Single Corpus']:
         elif contents_radio3 == 'Rhetoric Strategies':
             UserRhetStrategy(data_list = corpora_list)
         else:
-            #st.write(corpora_list)
-            #st.write(corpora_list[0])
-            #st.write(corpora_list[0].columns)
             distribution_plot_compareX(data_list = corpora_list)
 
 
