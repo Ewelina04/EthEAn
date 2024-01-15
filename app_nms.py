@@ -5597,7 +5597,10 @@ def distribution_plot_compareX(data_list):
             st.info("Function not supported for multiple corpora comparison.")
 
     with c_explore:
-        df = pd.concat( df_list, axis = 0, ignore_index = True )
+        if len(df_list) > 1:
+            df = pd.concat( df_list, axis = 0, ignore_index = True )
+        else:
+            df = df_list[0].copy()
         st.write('### Explore corpora')
         dff_columns = [ 'sentence', 'source', 'ethos_label', 'emotion', 'sentiment', 'Target' ]# , 'conversation_id','date', 'pathos_label'
 
