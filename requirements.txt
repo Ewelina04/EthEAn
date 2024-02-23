@@ -1,7 +1,5 @@
 streamlit
-ez_setup
-setuptools==65.5.0
-unroll
+/home/adminuser/venv/bin/python -m pip install --upgrade pip
 pandas
 nltk
 numpy
