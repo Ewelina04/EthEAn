@@ -1,5 +1,6 @@
 streamlit
-python3-setuptools
+setuptools==65.5.0
+unroll
 pandas
 nltk
 numpy
