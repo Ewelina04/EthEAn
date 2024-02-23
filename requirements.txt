@@ -1,5 +1,4 @@
 streamlit
-/home/adminuser/venv/bin/python -m pip install --upgrade pip
 pandas
 nltk
 numpy
@@ -10,8 +9,6 @@ scikit-learn
 openpyxl
 spacy
 plotly
-streamlit_tags
-streamlit_agraph
 pygraphviz 
 networkx
 https://github.com/explosion/spacy-models/releases/download/pl_core_news_sm-3.4.0/pl_core_news_sm-3.4.0.tar.gz
