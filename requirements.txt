@@ -1,5 +1,5 @@
-pip==22.0.3
 streamlit
+ez_setup
 setuptools==65.5.0
 unroll
 pandas
