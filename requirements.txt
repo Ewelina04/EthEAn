@@ -1,4 +1,5 @@
 streamlit
+python3-setuptools
 pandas
 nltk
 numpy
