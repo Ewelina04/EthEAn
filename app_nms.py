@@ -5334,14 +5334,12 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
 
 
-
         sns.set(font_scale=1.55, style='whitegrid')
-        
         maxval = df_dist_mix[col_unit].max()
         df_dist_mix['categories'] = df_dist_mix[dim1].astype('str') + ' ' + df_dist_mix[dim2].astype('str')
         #st.write(df_dist_ethos_all)
         fg_mix=sns.catplot(kind='bar', data=df_dist_mix, y = 'categories', x = col_unit,
-                        hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.4 )
+                        hue=dim20, dodge=True, palette = ['grey', 'darkgrey'], legend = True, aspect = 1.4 )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
             plt.xticks(np.arange(0, 101, 20))
@@ -5354,7 +5352,6 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
 
         sns.set(font_scale=1.4, style='whitegrid')
-        
         maxval = df_dist_ethos_all[col_unit].max()
         #st.write(df_dist_ethos_all)
         fg1=sns.catplot(kind='bar', data=df_dist_ethos_all, y = dim10, x = col_unit,
