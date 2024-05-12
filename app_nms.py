@@ -5289,11 +5289,12 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
             else:
                 col_unit = 'percentage'
-                df_dist_ethos = pd.DataFrame(df.groupby([dim1, dim2], as_index=False).size())
-                df_dist_ethos['size'] = df_dist_ethos['size'] / df.shape[0]
-                df_dist_ethos['size'] = df_dist_ethos['size'] * 100
-                df_dist_ethos[col_unit] = df_dist_ethos['size'].round(3)  
-                st.write(df_dist_ethos)
+                df_dist_mix = pd.DataFrame(df.groupby([dim1, dim2], as_index=False).size())
+                df_dist_mix['size'] = df_dist_mix['size'] / df.shape[0]
+                df_dist_mix['size'] = df_dist_mix['size'] * 100
+                df_dist_mix['size'] = df_dist_mix['size'].round(1)  
+                df_dist_mix = df_dist_mix.rename( columns = {'size': col_unit} )
+                #st.write(df_dist_ethos)
                 
                 df_dist_ethos = pd.DataFrame(df.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
                 df_dist_ethos_neu = df[ (df[dim2] != 'neutral') & (df[dim1] != 'neutral') ]
@@ -5332,12 +5333,32 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
             df_dist_ethos_all_neu = pd.concat([df_dist_ethos_all_neu, up_data_dict_neu[k_sub]], axis=0, ignore_index=True)
 
 
-        sns.set(font_scale=1.4, style='whitegrid')
 
+
+        sns.set(font_scale=1.55, style='whitegrid')
+        
+        maxval = df_dist_mix[col_unit].max()
+        df_dist_mix['categories'] = df_dist_mix[dim10].astype('str') + ' ' + df_dist_mix[dim20].astype('str')
+        #st.write(df_dist_ethos_all)
+        fg_mix=sns.catplot(kind='bar', data=df_dist_mix, y = 'categories', x = col_unit,
+                        hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.4 )
+        if col_unit == 'percentage':
+            plt.xlim(0, 100)
+            plt.xticks(np.arange(0, 101, 20))
+        else:
+            plt.xlim(0, maxval+111)
+            plt.xticks(np.arange(0, maxval+111, 100))
+            
+        plt.title(f'{dim10.capitalize()} & {dim20.capitalize()}')
+        fg1_tb_mix = df_dist_mix.sort_values(by = col_unit, ascending = False)
+
+
+        sns.set(font_scale=1.4, style='whitegrid')
+        
         maxval = df_dist_ethos_all[col_unit].max()
         #st.write(df_dist_ethos_all)
         fg1=sns.catplot(kind='bar', data=df_dist_ethos_all, y = dim10, x = col_unit,
-                        hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.15 )
+                        hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.2 )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
             plt.xticks(np.arange(0, 101, 20))
@@ -5359,7 +5380,7 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
         fg2_tb1 = df_dist_ethos_all_neu.set_index(dim10)#.drop('corpora')
 
         #st.write(df_dist_ethos_all.groupby([dim10, dim20]).percentage.mean().round(2), df_dist_ethos_all_neu.groupby([dim10, dim20]).percentage.mean().round(2))
-        return fg1, fg2, fg1_tb1, fg2_tb1
+        return fg1, fg2, fg1_tb1, fg2_tb1, fg_mix, fg1_tb_mix
 
 
     else:
@@ -5552,12 +5573,16 @@ def distribution_plot_compareX(data_list):
     with c5:
         if len(data_list) == 1:
             # fg1, fg2, fg1_tb1, fg2_tb1
-            fg1x, fg1x2, tb1x, tb1x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+            fg1x, fg1x2, tb1x, tb1x2, fg_mix, fg1_tb_mix = distribution_plot_compareX_sub_cross(data_list0 = data_list,
                         an_unit = contents_radio_unit, dim1 = 'ethos_label', dim2 = 'sentiment', target_type = contents_radio_targs)
 
-            fg2x, fg2x2, tb2x, tb2x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+            fg2x, fg2x2, tb2x, tb2x2, _, _ = distribution_plot_compareX_sub_cross(data_list0 = data_list,
                         an_unit = contents_radio_unit, dim1 = 'sentiment', dim2 = 'ethos_label', target_type = contents_radio_targs)
             ff1, ff2, = st.columns(2)
+            st.pyplot(fg_mix)
+            st.write(fg1_tb_mix)
+            add_spacelines(2)
+            
             with ff1:
                 st.pyplot(fg1x)
                 st.write(tb1x)
@@ -5578,12 +5603,16 @@ def distribution_plot_compareX(data_list):
 
     with c4:
         if len(data_list) == 1:
-            fg1x, fg1x2, tb1x, tb1x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+            fg1x, fg1x2, tb1x, tb1x2, fg_mix, fg1_tb_mix = distribution_plot_compareX_sub_cross(data_list0 = data_list,
                         an_unit = contents_radio_unit, dim1 = 'ethos_label', dim2 = 'emotion', target_type = contents_radio_targs)
 
-            fg2x, fg2x2, tb2x, tb2x2 = distribution_plot_compareX_sub_cross(data_list0 = data_list,
+            fg2x, fg2x2, tb2x, tb2x2, _, _ = distribution_plot_compareX_sub_cross(data_list0 = data_list,
                         an_unit = contents_radio_unit, dim1 = 'emotion', dim2 = 'ethos_label', target_type = contents_radio_targs)
             ff1, ff2, = st.columns(2)
+            st.pyplot(fg_mix)
+            st.write(fg1_tb_mix)
+            add_spacelines(2)
+            
             with ff1:
                 st.pyplot(fg1x)
                 st.write(tb1x)
