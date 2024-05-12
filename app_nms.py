@@ -5334,7 +5334,7 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
 
 
-        sns.set(font_scale=1.5, style='whitegrid')
+        sns.set(font_scale=1.2, style='whitegrid')
         maxval = df_dist_mix[col_unit].max()
         df_dist_mix['categories'] = df_dist_mix[dim10].astype('str') + ' ' + df_dist_mix[dim20].astype('str')
         df_dist_mix = df_dist_mix.sort_values(by = col_unit, ascending=False)
