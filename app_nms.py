@@ -2211,17 +2211,17 @@ def PronousLoP(data_list):
     st.pyplot(g)
     add_spacelines(1)
 
-    g = sns.catplot(data = df_pron_plot_melt, kind = 'bar', y = 'variable', x ='value',
-        col = 'ethos', hue = 'variable',
-        sharey=False, dodge=False, palette = 'hsv_r', legend=False, aspect = 1.4)
-    plt.tight_layout(pad=3)
+    #g = sns.catplot(data = df_pron_plot_melt, kind = 'bar', y = 'variable', x ='value',
+    #    col = 'ethos', hue = 'variable',
+    #    sharey=False, dodge=False, palette = 'hsv_r', legend=False, aspect = 1.4)
+    #plt.tight_layout(pad=3)
     #sns.move_legend(g, loc = 'lower left', bbox_to_anchor = (0.32, 0.98), ncol = 4, title = '')
-    g.set(xticks = np.arange(0, max_val+15, 10), ylabel = 'pronoun',)
-    plt.suptitle('Ethos')
-    for ax in g.axes.flatten():
-        ax.tick_params(labelbottom=True)
-    plt.show()
-    st.pyplot(g)
+    #g.set(xticks = np.arange(0, max_val+15, 10), ylabel = 'pronoun',)
+    #plt.suptitle('Ethos')
+   # for ax in g.axes.flatten():
+    #    ax.tick_params(labelbottom=True)
+   # plt.show()
+    #st.pyplot(g)
 
 
 
