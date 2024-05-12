@@ -5294,6 +5294,14 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
                 #st.write( pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(2)*100) )
                 df_dist_ethos_neu = pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
 
+                df_dist_ethos = pd.DataFrame(df.groupby([dim1, dim2], as_index=False).size())
+                df_dist_ethos['size'] = df_dist_ethos['size'] / df.shape[0]
+                df_dist_ethos['size'] = df_dist_ethos['size'] * 100
+                df_dist_ethos['size'] = df_dist_ethos['size'].round(3)                
+                df_dist_ethos_neu = df[ (df[dim2] != 'neutral') & (df[dim1] != 'neutral') ]
+                #st.write( pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(2)*100) )
+                df_dist_ethos_neu = pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
+
 
             df_dist_ethos.columns = [col_unit]
             df_dist_ethos.reset_index(inplace=True)
@@ -5330,7 +5338,7 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
                         hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.15 )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
-            plt.xticks(np.arange(0, 101, 10))
+            plt.xticks(np.arange(0, 101, 20))
         else:
             plt.xlim(0, maxval+111)
             plt.xticks(np.arange(0, maxval+111, 100))
@@ -5343,7 +5351,7 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
                         hue=dim20, dodge=True, palette = colors, legend = True, aspect = 1.2)
         if col_unit == 'percentage':
             plt.xlim(0, 100)
-            plt.xticks(np.arange(0, 101, 10))
+            plt.xticks(np.arange(0, 101, 20))
 
         plt.title(f'{dim10.capitalize()} x {dim20.capitalize()}')
         fg2_tb1 = df_dist_ethos_all_neu.set_index(dim10)#.drop('corpora')
