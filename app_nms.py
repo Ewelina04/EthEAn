@@ -5289,15 +5289,17 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
             else:
                 col_unit = 'percentage'
+                df_dist_ethos = pd.DataFrame(df.groupby([dim1, dim2], as_index=False).size())
+                df_dist_ethos['size'] = df_dist_ethos['size'] / df.shape[0]
+                df_dist_ethos['size'] = df_dist_ethos['size'] * 100
+                df_dist_ethos[col_unit] = df_dist_ethos['size'].round(3)  
+                st.write(df_dist_ethos)
+                
                 df_dist_ethos = pd.DataFrame(df.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
                 df_dist_ethos_neu = df[ (df[dim2] != 'neutral') & (df[dim1] != 'neutral') ]
                 #st.write( pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(2)*100) )
                 df_dist_ethos_neu = pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
-
-                df_dist_ethos = pd.DataFrame(df.groupby([dim1, dim2], as_index=False).size())
-                df_dist_ethos['size'] = df_dist_ethos['size'] / df.shape[0]
-                df_dist_ethos['size'] = df_dist_ethos['size'] * 100
-                df_dist_ethos['size'] = df_dist_ethos['size'].round(3)                
+                              
                 df_dist_ethos_neu = df[ (df[dim2] != 'neutral') & (df[dim1] != 'neutral') ]
                 #st.write( pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(2)*100) )
                 df_dist_ethos_neu = pd.DataFrame(df_dist_ethos_neu.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
