@@ -626,7 +626,7 @@ def compnwords(dataframe, column_name = 'sentence'):
 
 
 
-def StatsLog(df_list, an_type = 'ADU-based'):
+def StatsLog(data_list, an_type = 'ADU-based'):
     #st.write("#### Sentence Length Analysis")
     add_spacelines(2)
 
@@ -637,109 +637,109 @@ def StatsLog(df_list, an_type = 'ADU-based'):
             'Default Rephrase' : ' Neutral',
             'Default Inference' : ' Logos Support'}
     rhetoric_dims = ['ethos', 'logos']
-    df_list_et = df_list[0]
-    df_list_et['nwords'] = df_list_et['sentence'].str.split().map(len)
-    if not 'neutral' in df_list_et['ethos_label'].unique():
-        df_list_et['ethos_label'] = df_list_et['ethos_label'].map(ethos_mapping).map(map_naming)
-    df_list_log = df_list[1]
+    data_list_et = data_list[0]
+    data_list_et['nwords'] = data_list_et['sentence'].str.split().map(len)
+    if not 'neutral' in data_list_et['ethos_label'].unique():
+        data_list_et['ethos_label'] = data_list_et['ethos_label'].map(ethos_mapping).map(map_naming)
+    data_list_log = data_list[1]
     import re
-    df_list_log['locution_conclusion'] = df_list_log.locution_conclusion.apply(lambda x: " ".join( str(x).split(':')[1:]) )
-    df_list_log['locution_premise'] = df_list_log.locution_premise.apply(lambda x: " ".join( str(x).split(':')[1:]) )
-    df_list_log['sentence'] = df_list_log.locution_premise.astype('str')# + " " + df_list_log.locution_conclusion.astype('str')
-    df_list_log['nwords_conclusion'] = df_list_log['locution_conclusion'].str.split().map(len)
-    df_list_log['nwords_premise'] = df_list_log['locution_premise'].str.split().map(len)
-    df_list_log['nwords'] = df_list_log[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
+    data_list_log['locution_conclusion'] = data_list_log.locution_conclusion.apply(lambda x: " ".join( str(x).split(':')[1:]) )
+    data_list_log['locution_premise'] = data_list_log.locution_premise.apply(lambda x: " ".join( str(x).split(':')[1:]) )
+    data_list_log['sentence'] = data_list_log.locution_premise.astype('str')# + " " + data_list_log.locution_conclusion.astype('str')
+    data_list_log['nwords_conclusion'] = data_list_log['locution_conclusion'].str.split().map(len)
+    data_list_log['nwords_premise'] = data_list_log['locution_premise'].str.split().map(len)
+    data_list_log['nwords'] = data_list_log[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
 
-    df_list_log.connection = df_list_log.connection.map(map_naming)
-    df_list_log_stats = df_list_log.groupby(['connection'], as_index=False)['nwords'].mean().round(2)
-    log_all = df_list_log_stats[df_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
-    df_list_log_stats.loc[len(df_list_log_stats)] = [' Logos All', log_all]
+    data_list_log.connection = data_list_log.connection.map(map_naming)
+    data_list_log_stats = data_list_log.groupby(['connection'], as_index=False)['nwords'].mean().round(2)
+    log_all = data_list_log_stats[data_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
+    data_list_log_stats.loc[len(data_list_log_stats)] = [' Logos All', log_all]
 
-    df_list_et_stats = df_list_et.groupby(['ethos_label'], as_index=False)['nwords'].mean().round(2)
-    et_all = df_list_et_stats[df_list_et_stats.ethos_label.isin(['Ethos Support','Ethos Attack'])].nwords.mean().round(2)
-    df_list_et_stats.loc[len(df_list_et_stats)] = ['Ethos All', et_all]
+    data_list_et_stats = data_list_et.groupby(['ethos_label'], as_index=False)['nwords'].mean().round(2)
+    et_all = data_list_et_stats[data_list_et_stats.ethos_label.isin(['Ethos Support','Ethos Attack'])].nwords.mean().round(2)
+    data_list_et_stats.loc[len(data_list_et_stats)] = ['Ethos All', et_all]
     #st.stop()
 
     if an_type == 'Relation-based':
-            df_list_log_stats = df_list_log.groupby(['id_connection', 'connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].sum().round(2)
-            df_list_log_stats = df_list_log_stats.groupby(['connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].mean().round(2)
-            df_list_log_stats['nwords'] = df_list_log_stats[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
-            log_all = df_list_log_stats[df_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
-            df_list_log_stats.loc[len(df_list_log_stats)] = [' Logos All', log_all]
+            data_list_log_stats = data_list_log.groupby(['id_connection', 'connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].sum().round(2)
+            data_list_log_stats = data_list_log_stats.groupby(['connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].mean().round(2)
+            data_list_log_stats['nwords'] = data_list_log_stats[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
+            log_all = data_list_log_stats[data_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
+            data_list_log_stats.loc[len(data_list_log_stats)] = [' Logos All', log_all]
 
-            #st.write(df_list_log_stats)
+            #st.write(data_list_log_stats)
 
-    #df_list_et = compnwords(df_list_et, column_name = 'sentence')
-    #df_list_log_stats = compnwords(df_list_log_stats, column_name = 'sentence')
+    #data_list_et = compnwords(data_list_et, column_name = 'sentence')
+    #data_list_log_stats = compnwords(data_list_log_stats, column_name = 'sentence')
 
     cet_desc, c_log_stats_desc = st.columns(2)
-    #df_list_et_desc = pd.DataFrame(df_list_et[df_list_et.ethos_label.isin(['Ethos Support','Ethos Attack'])].groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
-    df_list_et_desc = pd.DataFrame(df_list_et.groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
-    df_list_et_desc = df_list_et_desc.T
+    #data_list_et_desc = pd.DataFrame(data_list_et[data_list_et.ethos_label.isin(['Ethos Support','Ethos Attack'])].groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
+    data_list_et_desc = pd.DataFrame(data_list_et.groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
+    data_list_et_desc = data_list_et_desc.T
     with cet_desc:
         st.write("ADU Length for **Ethos**: ")
-        st.write(df_list_et_desc)
-    #df_list_log_stats_desc = pd.DataFrame(df_list_log_stats[df_list_log_stats.connection.isin(conn_list)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
+        st.write(data_list_et_desc)
+    #data_list_log_stats_desc = pd.DataFrame(data_list_log_stats[data_list_log_stats.connection.isin(conn_list)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
     conn_list = [' Logos Attack', ' Logos Support', ' Neutral']
-    df_list_log_stats_desc = pd.DataFrame(df_list_log[df_list_log.connection.isin(conn_list)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
+    data_list_log_stats_desc = pd.DataFrame(data_list_log[data_list_log.connection.isin(conn_list)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
     if an_type == 'Relation-based':
-        df_list_log_stats = df_list_log.groupby(['id_connection', 'connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].sum().round(2)
-        df_list_log_stats_desc = pd.DataFrame(df_list_log_stats[df_list_log_stats.connection.isin(conn_list)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
+        data_list_log_stats = data_list_log.groupby(['id_connection', 'connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].sum().round(2)
+        data_list_log_stats_desc = pd.DataFrame(data_list_log_stats[data_list_log_stats.connection.isin(conn_list)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
 
-    df_list_log_stats_desc = df_list_log_stats_desc.T
+    data_list_log_stats_desc = data_list_log_stats_desc.T
     with c_log_stats_desc:
         st.write("ADU Length for **Logos**: ")
-        st.write(df_list_log_stats_desc)
+        st.write(data_list_log_stats_desc)
 
     add_spacelines(1)
     #cstat1, cstat2, cstat3, cstat4 = st.columns(4)
     cstat1, cstat2, _, _ = st.columns(4)
     with cstat1:
-        le = df_list_et_desc.loc['mean', 'Ethos Attack']
-        ll = df_list_log_stats_desc.loc['mean', ' Logos Attack']
+        le = data_list_et_desc.loc['mean', 'Ethos Attack']
+        ll = data_list_log_stats_desc.loc['mean', ' Logos Attack']
         lrel = round((le *100 / ll)- 100, 2)
         #st.write(le, ll, lrel)
         st.metric('Ethos Attack vs. Logos Attack', f" {le} vs. {ll} ", str(lrel)+'%')
 
     with cstat2:
-        le = df_list_et_desc.loc['mean', 'Ethos Support']
-        ll = df_list_log_stats_desc.loc['mean', ' Logos Support']
+        le = data_list_et_desc.loc['mean', 'Ethos Support']
+        ll = data_list_log_stats_desc.loc['mean', ' Logos Support']
         lrel = round((le *100 / ll)- 100, 2)
         st.metric('Ethos Support vs. Logos Support', f" {le} vs. {ll} ", str(lrel)+'%')
 
     #with cstat3:
-        #le = df_list_et_desc.loc['mean', 'Ethos Attack']
-        #ll = df_list_log_stats_desc.loc['mean', ' Logos Attack']
+        #le = data_list_et_desc.loc['mean', 'Ethos Attack']
+        #ll = data_list_log_stats_desc.loc['mean', ' Logos Attack']
         #lrel = round((ll *100 / le)- 100, 2)
         #st.metric('Logos Attack vs. Ethos Attack', f" {ll} vs. {le} ", str(lrel)+'%')
 
     #with cstat4:
-        #le = df_list_et_desc.loc['mean', 'Ethos Support']
-        #ll = df_list_log_stats_desc.loc['mean', ' Logos Support']
+        #le = data_list_et_desc.loc['mean', 'Ethos Support']
+        #ll = data_list_log_stats_desc.loc['mean', ' Logos Support']
         #lrel = round((ll *100 / le)- 100, 2)
         #st.metric('Logos Support vs. Ethos Support', f" {ll} vs. {le} ", str(lrel)+'%')
 
-    #st.write(df_list_log_stats)
-    #st.write(df_list_et_stats)
-    df_list_et_stats.columns = ['connection', 'nwords']
-    df_list_desc = pd.concat( [df_list_log_stats,
-                                df_list_et_stats], axis = 0, ignore_index=True )
+    #st.write(data_list_log_stats)
+    #st.write(data_list_et_stats)
+    data_list_et_stats.columns = ['connection', 'nwords']
+    data_list_desc = pd.concat( [data_list_log_stats,
+                                data_list_et_stats], axis = 0, ignore_index=True )
 
-    #df_list_desc = df_list_desc.reset_index()
-    #st.write(df_list_desc)
+    #data_list_desc = data_list_desc.reset_index()
+    #st.write(data_list_desc)
     #st.stop()
-    df_list_desc.columns = ['category', 'mean']
-    df_list_desc.loc[:4, 'dimension'] = 'Logos'
-    df_list_desc.loc[4:, 'dimension'] = 'Ethos'
-    df_list_desc = df_list_desc.sort_values(by = ['dimension', 'category'])
-    #df_list_desc['category'] = df_list_desc['category'].str.replace(' Ethos Neutral', 'Neutral').str.replace(' Logos  Neutral', ' Neutral')
+    data_list_desc.columns = ['category', 'mean']
+    data_list_desc.loc[:4, 'dimension'] = 'Logos'
+    data_list_desc.loc[4:, 'dimension'] = 'Ethos'
+    data_list_desc = data_list_desc.sort_values(by = ['dimension', 'category'])
+    #data_list_desc['category'] = data_list_desc['category'].str.replace(' Ethos Neutral', 'Neutral').str.replace(' Logos  Neutral', ' Neutral')
 
     sns.set(font_scale = 1.4, style = 'whitegrid')
-    f_desc = sns.catplot(data = df_list_desc, x = 'category', y = 'mean', col = 'dimension',
+    f_desc = sns.catplot(data = data_list_desc, x = 'category', y = 'mean', col = 'dimension',
                 kind = 'bar', palette = {'Ethos Attack':'#BB0000', 'Neutral':'#3B3591', 'Ethos Support':'#026F00', 'Ethos All':'#6C6C6E',
                         ' Logos Attack':'#BB0000', ' Neutral':'#3B3591', ' Logos Support':'#026F00', ' Logos All':'#6C6C6E'},
                         height = 4, aspect = 1.4, sharex=False)
-    f_desc.set(xlabel = '', ylabel = 'mean ADU length', ylim = (0, np.max(df_list_desc['mean']+2)))
+    f_desc.set(xlabel = '', ylabel = 'mean ADU length', ylim = (0, np.max(data_list_desc['mean']+2)))
     f_desc.set_xticklabels(fontsize = 13)
     for ax in f_desc.axes.ravel():
         for p in ax.patches:
@@ -749,74 +749,74 @@ def StatsLog(df_list, an_type = 'ADU-based'):
     st.write("************************************************************************")
 
     st.write("#### Word-based analytics")
-    df_list_et['nwords'] = df_list_et['sentence'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
-    #df_list_log_stats['nwords'] = df_list_log_stats['sentence'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
-    df_list_log['nwords_conclusion'] = df_list_log['locution_conclusion'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
-    df_list_log['nwords_premise'] = df_list_log['locution_premise'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
-    df_list_log['nwords'] = df_list_log[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
+    data_list_et['nwords'] = data_list_et['sentence'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
+    #data_list_log_stats['nwords'] = data_list_log_stats['sentence'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
+    data_list_log['nwords_conclusion'] = data_list_log['locution_conclusion'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
+    data_list_log['nwords_premise'] = data_list_log['locution_premise'].astype('str').apply(lambda x: np.mean( [ len(w)  for w in x.split()] ) )
+    data_list_log['nwords'] = data_list_log[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
 
 
-    df_list_log_stats = df_list_log.groupby(['connection'], as_index=False)['nwords'].mean().round(2)
-    log_all = df_list_log_stats[df_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
-    df_list_log_stats.loc[len(df_list_log_stats)] = [' Logos All', log_all]
+    data_list_log_stats = data_list_log.groupby(['connection'], as_index=False)['nwords'].mean().round(2)
+    log_all = data_list_log_stats[data_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
+    data_list_log_stats.loc[len(data_list_log_stats)] = [' Logos All', log_all]
 
-    df_list_et_stats = df_list_et.groupby(['ethos_label'], as_index=False)['nwords'].mean().round(2)
-    et_all = df_list_et_stats[df_list_et_stats.ethos_label.isin(['Ethos Support','Ethos Attack'])].nwords.mean().round(2)
-    df_list_et_stats.loc[len(df_list_et_stats)] = ['Ethos All', et_all]
+    data_list_et_stats = data_list_et.groupby(['ethos_label'], as_index=False)['nwords'].mean().round(2)
+    et_all = data_list_et_stats[data_list_et_stats.ethos_label.isin(['Ethos Support','Ethos Attack'])].nwords.mean().round(2)
+    data_list_et_stats.loc[len(data_list_et_stats)] = ['Ethos All', et_all]
     #st.stop()
 
     if an_type == 'Relation-based':
-            df_list_log_stats = df_list_log.groupby(['id_connection', 'connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].sum().round(2)
-            df_list_log_stats = df_list_log_stats.groupby(['connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].mean().round(2)
-            df_list_log_stats['nwords'] = df_list_log_stats[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
-            log_all = df_list_log_stats[df_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
-            df_list_log_stats.loc[len(df_list_log_stats)] = [' Logos All', log_all]
+            data_list_log_stats = data_list_log.groupby(['id_connection', 'connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].sum().round(2)
+            data_list_log_stats = data_list_log_stats.groupby(['connection'], as_index=False)[['nwords_premise', 'nwords_conclusion']].mean().round(2)
+            data_list_log_stats['nwords'] = data_list_log_stats[['nwords_conclusion', 'nwords_premise']].mean(axis=1).round(2)
+            log_all = data_list_log_stats[data_list_log_stats.connection.isin([' Logos Attack', ' Logos Support'])].nwords.mean().round(2)
+            data_list_log_stats.loc[len(data_list_log_stats)] = [' Logos All', log_all]
 
 
     #cet_desc, c_log_stats_desc = st.columns(2)
-    #df_list_et_desc = pd.DataFrame(df_list_et.groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
-    #df_list_et_desc = df_list_et_desc.T
+    #data_list_et_desc = pd.DataFrame(data_list_et.groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
+    #data_list_et_desc = data_list_et_desc.T
     #with cet_desc:
         #st.write("Word Length for **Ethos**: ")
-        #st.write(df_list_et_desc)
-    #df_list_log_stats_desc = pd.DataFrame(df_list_log_stats.groupby('connection').nwords.describe().round(2).iloc[:, 1:])
-    #df_list_log_stats_desc = df_list_log_stats_desc.T
+        #st.write(data_list_et_desc)
+    #data_list_log_stats_desc = pd.DataFrame(data_list_log_stats.groupby('connection').nwords.describe().round(2).iloc[:, 1:])
+    #data_list_log_stats_desc = data_list_log_stats_desc.T
     #with c_log_stats_desc:
         #st.write("Word Length for **Logos**: ")
-        #st.write(df_list_log_stats_desc)
+        #st.write(data_list_log_stats_desc)
 
-    df_list_et_stats.columns = ['connection', 'nwords']
+    data_list_et_stats.columns = ['connection', 'nwords']
     add_spacelines(1)
     cstat12, cstat22 ,_, _= st.columns(4)
     with cstat12:
-        le = df_list_et_stats[df_list_et_stats.connection == 'Ethos Attack'].nwords.iloc[0]
-        ll =  df_list_log_stats[df_list_log_stats.connection == ' Logos Attack'].nwords.iloc[0]
+        le = data_list_et_stats[data_list_et_stats.connection == 'Ethos Attack'].nwords.iloc[0]
+        ll =  data_list_log_stats[data_list_log_stats.connection == ' Logos Attack'].nwords.iloc[0]
         lrel = round((le *100 / ll)- 100, 2)
         st.metric('Ethos Attack vs. Logos Attack', f" {le} vs. {ll} ", str(lrel)+'%')
 
     with cstat22:
-        le = df_list_et_stats[df_list_et_stats.connection == 'Ethos Support'].nwords.iloc[0]
-        ll =  df_list_log_stats[df_list_log_stats.connection == ' Logos Support'].nwords.iloc[0]
+        le = data_list_et_stats[data_list_et_stats.connection == 'Ethos Support'].nwords.iloc[0]
+        ll =  data_list_log_stats[data_list_log_stats.connection == ' Logos Support'].nwords.iloc[0]
         lrel = round((le *100 / ll)- 100, 2)
         st.metric('Ethos Support vs. Logos Support', f" {le} vs. {ll} ", str(lrel)+'%')
 
 
-    df_list_desc = pd.concat( [df_list_log_stats,
-                                df_list_et_stats], axis = 0, ignore_index=True )
+    data_list_desc = pd.concat( [data_list_log_stats,
+                                data_list_et_stats], axis = 0, ignore_index=True )
 
-    df_list_desc.columns = ['category', 'mean']
-    df_list_desc.loc[:4, 'dimension'] = 'Logos'
-    df_list_desc.loc[4:, 'dimension'] = 'Ethos'
-    df_list_desc = df_list_desc.sort_values(by = ['dimension', 'category'])
-    #df_list_desc['category'] = df_list_desc['category'].str.replace(' Ethos Neutral', 'Neutral').str.replace(' Logos  Neutral', ' Neutral')
+    data_list_desc.columns = ['category', 'mean']
+    data_list_desc.loc[:4, 'dimension'] = 'Logos'
+    data_list_desc.loc[4:, 'dimension'] = 'Ethos'
+    data_list_desc = data_list_desc.sort_values(by = ['dimension', 'category'])
+    #data_list_desc['category'] = data_list_desc['category'].str.replace(' Ethos Neutral', 'Neutral').str.replace(' Logos  Neutral', ' Neutral')
 
 
     sns.set(font_scale = 1.4, style = 'whitegrid')
-    f_desc2 = sns.catplot(data = df_list_desc, x = 'category', y = 'mean', col = 'dimension',
+    f_desc2 = sns.catplot(data = data_list_desc, x = 'category', y = 'mean', col = 'dimension',
                 kind = 'bar', palette = {'Ethos Attack':'#BB0000', 'Neutral':'#3B3591', 'Ethos Support':'#026F00', 'Ethos All':'#6C6C6E',
                         ' Logos Attack':'#BB0000', ' Neutral':'#3B3591', ' Logos Support':'#026F00', ' Logos All':'#6C6C6E'},
                         height = 4, aspect = 1.4, sharex=False)
-    f_desc2.set(xlabel = '', ylabel = 'mean word length', ylim = (0, np.max(df_list_desc['mean']+2)))
+    f_desc2.set(xlabel = '', ylabel = 'mean word length', ylim = (0, np.max(data_list_desc['mean']+2)))
     f_desc2.set_xticklabels(fontsize = 13)
     for ax in f_desc2.axes.ravel():
         for p in ax.patches:
@@ -847,17 +847,17 @@ def StatsLog(df_list, an_type = 'ADU-based'):
     dims_ttr = ['Ethos Attack', 'Ethos Support', ' Logos Attack', ' Logos Support']
     vals_ttr = []
 
-    df_list_log['sentence'] = df_list_log['locution_premise'].astype('str') + " " + df_list_log['locution_conclusion'].astype('str')
-    df_list_log_stats = lemmatization(df_list_log, 'sentence') # premise_lemmatized
-    #st.write(df_list_log_stats)
+    data_list_log['sentence'] = data_list_log['locution_premise'].astype('str') + " " + data_list_log['locution_conclusion'].astype('str')
+    data_list_log_stats = lemmatization(data_list_log, 'sentence') # premise_lemmatized
+    #st.write(data_list_log_stats)
 
     lr_def = str(lr_coeff)
 
     colttr1, colttr2, colttr3, colttr4 = st.columns(4)
-    ttr_ea1 = " ".join( df_list_et[df_list_et['ethos_label'] == 'Ethos Attack']['sentence_lemmatized'].astype('str').str.lower().values )
+    ttr_ea1 = " ".join( data_list_et[data_list_et['ethos_label'] == 'Ethos Attack']['sentence_lemmatized'].astype('str').str.lower().values )
     ttr_ea1 = ttr_ea1.split()
-    df_list_et_targets = df_list_et.Target.dropna().str.lower().values
-    ttr_ea1 = list(w for w in ttr_ea1 if not w in df_list_et_targets)
+    data_list_et_targets = data_list_et.Target.dropna().str.lower().values
+    ttr_ea1 = list(w for w in ttr_ea1 if not w in data_list_et_targets)
     ttr_ea1_token = len(ttr_ea1)
     ttr_ea1_type = len( set(ttr_ea1) )
     ttr_ea = ttr_lr(t = ttr_ea1_type, n = ttr_ea1_token, definition = lr_def)
@@ -867,9 +867,9 @@ def StatsLog(df_list, an_type = 'ADU-based'):
         st.metric('Lexical Richness of Ethos Attack', ttr_ea)
 
 
-    ttr_es1 = " ".join( df_list_et[df_list_et['ethos_label'] == 'Ethos Support']['sentence_lemmatized'].astype('str').str.lower().values )
+    ttr_es1 = " ".join( data_list_et[data_list_et['ethos_label'] == 'Ethos Support']['sentence_lemmatized'].astype('str').str.lower().values )
     ttr_es1 = ttr_es1.split()
-    ttr_es1 = list(w for w in ttr_es1 if not w in df_list_et_targets)
+    ttr_es1 = list(w for w in ttr_es1 if not w in data_list_et_targets)
     ttr_es1_token = len(ttr_es1)
     ttr_es1_type = len( set(ttr_es1) )
     ttr_es = ttr_lr(t = ttr_es1_type, n = ttr_es1_token, definition = lr_def)
@@ -878,9 +878,9 @@ def StatsLog(df_list, an_type = 'ADU-based'):
     with colttr2:
         st.metric('Lexical Richness of Ethos Support', ttr_es)
 
-    ttr_ea1 = " ".join( df_list_log_stats[df_list_log_stats['connection'] == ' Logos Attack']['sentence_lemmatized'].astype('str').str.lower().values )
+    ttr_ea1 = " ".join( data_list_log_stats[data_list_log_stats['connection'] == ' Logos Attack']['sentence_lemmatized'].astype('str').str.lower().values )
     ttr_ea1 = ttr_ea1.split()
-    ttr_ea1 = list(w for w in ttr_ea1 if not w in df_list_et_targets)
+    ttr_ea1 = list(w for w in ttr_ea1 if not w in data_list_et_targets)
     ttr_ea1_token = len(ttr_ea1)
     ttr_ea1_type = len( set(ttr_ea1) )
     ttr_ea = ttr_lr(t = ttr_ea1_type, n = ttr_ea1_token, definition = lr_def)
@@ -890,9 +890,9 @@ def StatsLog(df_list, an_type = 'ADU-based'):
         st.metric('Lexical Richness of Logos Attack', ttr_ea)
 
 
-    ttr_es1 = " ".join( df_list_log_stats[df_list_log_stats['connection'] == ' Logos Support']['sentence_lemmatized'].astype('str').str.lower().values )
+    ttr_es1 = " ".join( data_list_log_stats[data_list_log_stats['connection'] == ' Logos Support']['sentence_lemmatized'].astype('str').str.lower().values )
     ttr_es1 = ttr_es1.split()
-    ttr_es1 = list(w for w in ttr_es1 if not w in df_list_et_targets)
+    ttr_es1 = list(w for w in ttr_es1 if not w in data_list_et_targets)
     ttr_es1_token = len(ttr_es1)
     ttr_es1_type = len( set(ttr_es1) )
     ttr_es = ttr_lr(t = ttr_es1_type, n = ttr_es1_token, definition = lr_def)
@@ -1020,12 +1020,12 @@ def PolarizingNetworksSub_new(df3):
 
 
 
-def FellowsDevils_new(df_list):
+def FellowsDevils_new(data_list):
     st.write("### Fellows - Devils")
     meth_feldev = 'frequency'#st.radio("Choose a method of calculation", ('frequency', 'log-likelihood ratio') )    selected_rhet_dim = 'ethos'
     #selected_rhet_dim = selected_rhet_dim+"_label"
     add_spacelines(1)
-    df = df_list[0]
+    df = data_list[0]
     #st.write(df)
     df['target'] = df.Target.values
     df['source'] = df.source.astype('str').str.strip()
@@ -1378,7 +1378,7 @@ def FellowsDevils_new(df_list):
 
 
 
-def StatsLog_compare(df_list, an_type = 'ADU-based'):
+def StatsLog_compare(data_list, an_type = 'ADU-based'):
     #st.write("#### Sentence Length Analysis")
     add_spacelines(2)
     conn_list = [' Logos Attack', ' Logos Support']
@@ -1387,25 +1387,25 @@ def StatsLog_compare(df_list, an_type = 'ADU-based'):
             'Default Rephrase' : ' Logos  Rephrase',
             'Default Inference' : ' Logos Support'}
     rhetoric_dims = ['ethos', 'logos']
-    df_list_et = pd.concat([df_list[0], df_list[-2]], axis=0, ignore_index = True)
+    data_list_et = pd.concat([data_list[0], data_list[-2]], axis=0, ignore_index = True)
 
-    #df_list_et = df_list[0]
-    if not 'neutral' in df_list_et['ethos_label'].unique():
-        df_list_et['ethos_label'] = df_list_et['ethos_label'].map(ethos_mapping).map(map_naming)
-    #df_list_log = df_list[1]
-    df_list_log = pd.concat([df_list[1], df_list[-1]], axis=0, ignore_index = True)
+    #data_list_et = data_list[0]
+    if not 'neutral' in data_list_et['ethos_label'].unique():
+        data_list_et['ethos_label'] = data_list_et['ethos_label'].map(ethos_mapping).map(map_naming)
+    #data_list_log = data_list[1]
+    data_list_log = pd.concat([data_list[1], data_list[-1]], axis=0, ignore_index = True)
     import re
-    df_list_log['locution_conclusion'] = df_list_log.locution_conclusion.apply(lambda x: " ".join( str(x).split(':')[1:]) )
-    df_list_log['locution_premise'] = df_list_log.locution_premise.apply(lambda x: " ".join( str(x).split(':')[1:]) )
-    df_list_log['sentence'] = df_list_log.locution_premise.astype('str')# + " " + df_list_log.conclusion.astype('str')
-    df_list_log_stats = df_list_log.groupby(['corpus', 'locution_premise', 'id_connection', 'connection'])['sentence'].apply(lambda x: " ".join(x)).reset_index()
+    data_list_log['locution_conclusion'] = data_list_log.locution_conclusion.apply(lambda x: " ".join( str(x).split(':')[1:]) )
+    data_list_log['locution_premise'] = data_list_log.locution_premise.apply(lambda x: " ".join( str(x).split(':')[1:]) )
+    data_list_log['sentence'] = data_list_log.locution_premise.astype('str')# + " " + data_list_log.conclusion.astype('str')
+    data_list_log_stats = data_list_log.groupby(['corpus', 'locution_premise', 'id_connection', 'connection'])['sentence'].apply(lambda x: " ".join(x)).reset_index()
 
     if an_type == 'Relation-based':
-            df_list_log['locution_premise'] = df_list_log['locution_premise'].astype('str')
-            df_list_log['locution_conclusion'] = df_list_log['locution_conclusion'].astype('str')
+            data_list_log['locution_premise'] = data_list_log['locution_premise'].astype('str')
+            data_list_log['locution_conclusion'] = data_list_log['locution_conclusion'].astype('str')
 
-            dfp = df_list_log.groupby(['corpus', 'id_connection', 'connection'])['locution_premise'].apply(lambda x: " ".join(x)).reset_index()
-            #dfc = df_list_log.groupby(['id_connection', 'connection'])['locution_conclusion'].apply(lambda x: " ".join(x)).reset_index()
+            dfp = data_list_log.groupby(['corpus', 'id_connection', 'connection'])['locution_premise'].apply(lambda x: " ".join(x)).reset_index()
+            #dfc = data_list_log.groupby(['id_connection', 'connection'])['locution_conclusion'].apply(lambda x: " ".join(x)).reset_index()
             #dfp = dfp.merge(dfc, on = ['id_connection', 'connection']) #pd.concat([dfp, dfc.iloc[:, -1:]], axis=1) #dfp.merge(dfc, on = ['id_connection', 'connection'])
             dfp = dfp.drop_duplicates()
 
@@ -1413,35 +1413,35 @@ def StatsLog_compare(df_list, an_type = 'ADU-based'):
             import re
             dfp['sentence'] = dfp['sentence'].apply(lambda x: re.sub(r"\W+", " ", str(x)))
             dfp['sentence'] = dfp['sentence'].astype('str').str.lower()
-            df_list_log_stats = dfp.copy()
+            data_list_log_stats = dfp.copy()
 
-    df_list_log_stats.connection = df_list_log_stats.connection.map(map_naming)
+    data_list_log_stats.connection = data_list_log_stats.connection.map(map_naming)
 
 
-    df_list_et = compnwords(df_list_et, column_name = 'sentence')
-    df_list_log_stats = compnwords(df_list_log_stats, column_name = 'sentence')
+    data_list_et = compnwords(data_list_et, column_name = 'sentence')
+    data_list_log_stats = compnwords(data_list_log_stats, column_name = 'sentence')
 
     cet_desc, c_log_stats_desc = st.columns(2)
-    df_list_et_desc = pd.DataFrame(df_list_et[df_list_et.ethos_label.isin(['Ethos Support','Ethos Attack'])].groupby(['corpus', 'ethos_label']).nwords.describe().round(2).iloc[:, 1:])
-    #df_list_et_desc = df_list_et_desc.T
+    data_list_et_desc = pd.DataFrame(data_list_et[data_list_et.ethos_label.isin(['Ethos Support','Ethos Attack'])].groupby(['corpus', 'ethos_label']).nwords.describe().round(2).iloc[:, 1:])
+    #data_list_et_desc = data_list_et_desc.T
     with cet_desc:
         st.write("Sentence Length for **Ethos**: ")
-        st.write(df_list_et_desc)
+        st.write(data_list_et_desc)
         #st.stop()
 
-    df_list_log_stats_desc = pd.DataFrame(df_list_log_stats[df_list_log_stats.connection.isin(conn_list)].groupby(['corpus', 'connection']).nwords.describe().round(2).iloc[:, 1:])
-    #df_list_log_stats_desc = df_list_log_stats_desc.T
+    data_list_log_stats_desc = pd.DataFrame(data_list_log_stats[data_list_log_stats.connection.isin(conn_list)].groupby(['corpus', 'connection']).nwords.describe().round(2).iloc[:, 1:])
+    #data_list_log_stats_desc = data_list_log_stats_desc.T
     with c_log_stats_desc:
         st.write("Sentence Length for **Logos**: ")
-        st.write(df_list_log_stats_desc)
+        st.write(data_list_log_stats_desc)
 
 
     add_spacelines(1)
-    df_list_log_stats_desc = df_list_log_stats_desc.reset_index()
-    df_list_et_desc = df_list_et_desc.reset_index()
-    #st.write(df_list_log_stats_desc.columns)
-    coprs_names1 = df_list_log_stats_desc.corpus.iloc[0]
-    coprs_names2 = df_list_log_stats_desc.corpus.iloc[2]
+    data_list_log_stats_desc = data_list_log_stats_desc.reset_index()
+    data_list_et_desc = data_list_et_desc.reset_index()
+    #st.write(data_list_log_stats_desc.columns)
+    coprs_names1 = data_list_log_stats_desc.corpus.iloc[0]
+    coprs_names2 = data_list_log_stats_desc.corpus.iloc[2]
     coprs_names = [coprs_names1, coprs_names2]
 
     #cstat1, cstat2, cstat3, cstat4 = st.columns(4)
@@ -1449,40 +1449,40 @@ def StatsLog_compare(df_list, an_type = 'ADU-based'):
     for cname in coprs_names:
         with cstat1:
             st.write(f"**{cname}**")
-            le = df_list_et_desc[(df_list_et_desc.corpus == cname) & (df_list_et_desc.ethos_label == 'Ethos Attack')]['mean'].iloc[0]
-            ll = df_list_log_stats_desc[(df_list_log_stats_desc.corpus == cname) &\
-                    (df_list_log_stats_desc.connection == ' Logos Attack')]['mean'].iloc[0]
-            #ll = df_list_log_stats_desc[df_list_log_stats_desc.corpus == cname].loc['mean', ' Logos Attack']
+            le = data_list_et_desc[(data_list_et_desc.corpus == cname) & (data_list_et_desc.ethos_label == 'Ethos Attack')]['mean'].iloc[0]
+            ll = data_list_log_stats_desc[(data_list_log_stats_desc.corpus == cname) &\
+                    (data_list_log_stats_desc.connection == ' Logos Attack')]['mean'].iloc[0]
+            #ll = data_list_log_stats_desc[data_list_log_stats_desc.corpus == cname].loc['mean', ' Logos Attack']
             lrel = round((le *100 / ll)- 100, 2)
             #st.write(le, ll, lrel)
             st.metric('Ethos Attack vs. Logos Attack', f" {le} vs. {ll} ", str(lrel)+'%')
 
         with cstat2:
             st.write(f"**{cname}**")
-            #le = df_list_et_desc.loc['mean', 'Ethos Support']
-            #ll = df_list_log_stats_desc.loc['mean', ' Logos Support']
-            le = df_list_et_desc[(df_list_et_desc.corpus == cname) & (df_list_et_desc.ethos_label == 'Ethos Support')]['mean'].iloc[0]
-            ll = df_list_log_stats_desc[(df_list_log_stats_desc.corpus == cname) &\
-                    (df_list_log_stats_desc.connection == ' Logos Support')]['mean'].iloc[0]
+            #le = data_list_et_desc.loc['mean', 'Ethos Support']
+            #ll = data_list_log_stats_desc.loc['mean', ' Logos Support']
+            le = data_list_et_desc[(data_list_et_desc.corpus == cname) & (data_list_et_desc.ethos_label == 'Ethos Support')]['mean'].iloc[0]
+            ll = data_list_log_stats_desc[(data_list_log_stats_desc.corpus == cname) &\
+                    (data_list_log_stats_desc.connection == ' Logos Support')]['mean'].iloc[0]
             lrel = round((le *100 / ll)- 100, 2)
             st.metric('Ethos Support vs. Logos Support', f" {le} vs. {ll} ", str(lrel)+'%')
 
     add_spacelines(2)
-    df_list_log_stats_desc['dimension'] = 'Logos'
-    df_list_log_stats_desc = df_list_log_stats_desc.rename(columns = {'connection':'category'})
-    df_list_et_desc = df_list_et_desc.rename(columns = {'ethos_label':'category'})
-    df_list_et_desc['dimension'] = 'Ethos'
+    data_list_log_stats_desc['dimension'] = 'Logos'
+    data_list_log_stats_desc = data_list_log_stats_desc.rename(columns = {'connection':'category'})
+    data_list_et_desc = data_list_et_desc.rename(columns = {'ethos_label':'category'})
+    data_list_et_desc['dimension'] = 'Ethos'
 
-    df_list_desc = pd.concat( [df_list_log_stats_desc, df_list_et_desc], axis = 0, ignore_index = True )
-    #st.write(df_list_desc)
-    df_list_desc = df_list_desc.sort_values(by = ['dimension', 'category'])
+    data_list_desc = pd.concat( [data_list_log_stats_desc, data_list_et_desc], axis = 0, ignore_index = True )
+    #st.write(data_list_desc)
+    data_list_desc = data_list_desc.sort_values(by = ['dimension', 'category'])
 
     sns.set(font_scale = 1.15, style = 'whitegrid')
-    f_desc = sns.catplot(data = df_list_desc, x = 'category', y = 'mean', col = 'dimension', row = 'corpus',
+    f_desc = sns.catplot(data = data_list_desc, x = 'category', y = 'mean', col = 'dimension', row = 'corpus',
                 kind = 'bar', palette = {'Ethos Attack':'#BB0000', ' No Ethos':'#022D96', 'Ethos Support':'#026F00',
                         ' Logos Attack':'#BB0000', ' Logos  Rephrase':'#D7A000', ' Logos Support':'#026F00'},
                         height = 4, aspect = 1.4, sharex=False)
-    f_desc.set(xlabel = '', ylabel = 'mean sentence length', ylim = (0, np.max(df_list_desc['mean']+2)))
+    f_desc.set(xlabel = '', ylabel = 'mean sentence length', ylim = (0, np.max(data_list_desc['mean']+2)))
     for ax in f_desc.axes.ravel():
         for p in ax.patches:
             ax.annotate(format(p.get_height(), '.2f'), (p.get_x() + p.get_width() / 2., p.get_height()),
@@ -1495,33 +1495,33 @@ def StatsLog_compare(df_list, an_type = 'ADU-based'):
 
     if an_type == 'ADU-based':
         #cet_desc, c_log_stats_desc = st.columns(2)
-        #st.write(df_list_et)
-        #n_words_all_list = df_list[-1]['premise'].tolist() + df_list[-1]['conclusion'].tolist() + df_list_et.sentence.tolist()
+        #st.write(data_list_et)
+        #n_words_all_list = data_list[-1]['premise'].tolist() + data_list[-1]['conclusion'].tolist() + data_list_et.sentence.tolist()
         vals = []
         cats_all = []
         corps_all = []
 
         for cname in coprs_names:
-            n_words_all_list = df_list_log_stats[df_list_log_stats.corpus == cname].sentence.tolist() +\
-                        df_list_et[df_list_et.corpus == cname].sentence.tolist()
+            n_words_all_list = data_list_log_stats[data_list_log_stats.corpus == cname].sentence.tolist() +\
+                        data_list_et[data_list_et.corpus == cname].sentence.tolist()
 
             n_words_all_series = pd.DataFrame({'text':n_words_all_list})
             n_words_all_series = n_words_all_series.drop_duplicates()
             n_words_all_series['nl'] = n_words_all_series.text.str.split().map(len)
             n_words_all = n_words_all_series['nl'].mean().round(2)
 
-            df_list_et_desc = pd.DataFrame(df_list_et[(df_list_et.ethos_label.isin(['Ethos Support','Ethos Attack'])) & (df_list_et.corpus == cname)].groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
-            df_list_et_desc = df_list_et_desc.T
+            data_list_et_desc = pd.DataFrame(data_list_et[(data_list_et.ethos_label.isin(['Ethos Support','Ethos Attack'])) & (data_list_et.corpus == cname)].groupby('ethos_label').nwords.describe().round(2).iloc[:, 1:])
+            data_list_et_desc = data_list_et_desc.T
 
-            df_list_log_stats_desc = pd.DataFrame(df_list_log_stats[(df_list_log_stats.connection.isin(conn_list)) & (df_list_log_stats.corpus == cname)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
-            df_list_log_stats_desc = df_list_log_stats_desc.T
+            data_list_log_stats_desc = pd.DataFrame(data_list_log_stats[(data_list_log_stats.connection.isin(conn_list)) & (data_list_log_stats.corpus == cname)].groupby('connection').nwords.describe().round(2).iloc[:, 1:])
+            data_list_log_stats_desc = data_list_log_stats_desc.T
 
 
             add_spacelines(1)
             n_words_all = round(n_words_all, 1)
 
 
-            le = df_list_et_desc.loc['mean', 'Ethos Attack']
+            le = data_list_et_desc.loc['mean', 'Ethos Attack']
             lrel = round(le -n_words_all, 1)
             vals.append(n_words_all)
             cats_all.append('All')
@@ -1531,40 +1531,40 @@ def StatsLog_compare(df_list, an_type = 'ADU-based'):
             corps_all.append(cname)
             #st.write(le, ll, lrel)
 
-            le = df_list_et_desc.loc['mean', 'Ethos Support']
+            le = data_list_et_desc.loc['mean', 'Ethos Support']
             lrel = round(le -n_words_all, 1)
             #lrel = round((le *100 / ll)- 100, 2)
             vals.append(le)
             cats_all.append('Ethos Support')
             corps_all.append(cname)
 
-            le = df_list_log_stats_desc.loc['mean', " Logos Attack"]
+            le = data_list_log_stats_desc.loc['mean', " Logos Attack"]
             lrel = round(le -n_words_all, 1)
             #st.write(le, ll, lrel)
             vals.append(le)
             cats_all.append(" Logos Attack")
             corps_all.append(cname)
 
-            le = df_list_log_stats_desc.loc['mean', " Logos Support"]
-            #ll = df_list_log_stats_desc.loc['mean', ' Logos Support']
+            le = data_list_log_stats_desc.loc['mean', " Logos Support"]
+            #ll = data_list_log_stats_desc.loc['mean', ' Logos Support']
             lrel = round(le -n_words_all, 1)
             vals.append(le)
             cats_all.append( " Logos Support")
             corps_all.append(cname)
 
 
-        df_list_desc = pd.DataFrame([corps_all, cats_all, vals]).T
-        df_list_desc.columns = ['corpus', 'category', 'mean']
+        data_list_desc = pd.DataFrame([corps_all, cats_all, vals]).T
+        data_list_desc.columns = ['corpus', 'category', 'mean']
         #add_spacelines(1)
-        #st.write(df_list_desc)
+        #st.write(data_list_desc)
         #st.stop()
 
         sns.set(font_scale = 1, style = 'whitegrid')
-        f_desc = sns.catplot(data = df_list_desc, x = 'category', y = 'mean', col = 'corpus',
+        f_desc = sns.catplot(data = data_list_desc, x = 'category', y = 'mean', col = 'corpus',
                     kind = 'bar', palette = {'Ethos Attack':'#BB0000', 'All':'#022D96', 'Ethos Support':'#026F00',
                             ' Logos Attack':'#BB0000', ' Logos  Rephrase':'#D7A000', ' Logos Support':'#026F00'},
                             aspect = 1.65, sharex=False, height=4)
-        f_desc.set(xlabel = '', ylabel = 'mean sentence length', ylim = (0, np.max(df_list_desc['mean']+1)))
+        f_desc.set(xlabel = '', ylabel = 'mean sentence length', ylim = (0, np.max(data_list_desc['mean']+1)))
         for ax in f_desc.axes.ravel():
             for p in ax.patches:
                 ax.annotate(format(p.get_height(), '.2f'), (p.get_x() + p.get_width() / 2., p.get_height()),
@@ -1583,17 +1583,17 @@ def StatsLog_compare(df_list, an_type = 'ADU-based'):
 
 
 
-def OddsRatioLog_compare(df_list, selected_rhet_dim, an_type = 'ADU-based'):
+def OddsRatioLog_compare(data_list, selected_rhet_dim, an_type = 'ADU-based'):
     rhetoric_dims = ['ethos', 'logos']
 
     if selected_rhet_dim == 'ethos_label':
-        df = df_list[0]
+        df = data_list[0]
         if not 'neutral' in df['ethos_label'].unique():
             df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
         df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str').str.lower().str.replace('ahould', 'should')
 
     if selected_rhet_dim == 'logos_label':
-        df = df_list[1]
+        df = data_list[1]
         #st.write(df)
         df['logos_label'] = df.connection.map({
                             'Default Conflict': 'attack',
@@ -1768,7 +1768,7 @@ def OddsRatioLog_compare(df_list, selected_rhet_dim, an_type = 'ADU-based'):
 
 
 
-def OddsRatioLog(df_list, an_type = 'ADU-based'):
+def OddsRatioLog(data_list, an_type = 'ADU-based'):
     st.write("### Lexical Analysis - Odds Ratio")
     add_spacelines(2)
     rhetoric_dims = ['ethos', 'logos']
@@ -1777,13 +1777,13 @@ def OddsRatioLog(df_list, an_type = 'ADU-based'):
     add_spacelines(1)
 
     if selected_rhet_dim == 'ethos_label':
-        df = df_list[0]
+        df = data_list[0]
         if not 'neutral' in df['ethos_label'].unique():
             df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
 
         df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str').str.lower().str.replace('ahould', 'should')
     if selected_rhet_dim == 'logos_label':
-        df = df_list[1]
+        df = data_list[1]
         #st.write(df)
         df['logos_label'] = df.connection.map({
                             'Default Conflict': 'attack',
@@ -2123,7 +2123,7 @@ def count_categories(dataframe, categories_column, spliting = False, prefix_txt 
   return dataframe
 
 
-def PronousLoP(df_list):
+def PronousLoP(data_list):
     st.write("### Language of Polarization Cues")
     add_spacelines(2)
 
@@ -2134,7 +2134,7 @@ def PronousLoP(df_list):
     radio_prons_cat = st.multiselect('Choose a method of searching for pronouns',
                     ['singular pronouns',
                     'plural pronouns'], ['plural pronouns'])
-    df = df_list[0]
+    df = data_list[0]
 
     if not 'neutral' in df['ethos_label'].unique():
         df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
@@ -2225,7 +2225,7 @@ def PronousLoP(df_list):
 
 
 
-def FreqTables(df_list, rhetoric_dims = [ 'ethos']):
+def FreqTables(data_list, rhetoric_dims = [ 'ethos']):
     st.write("### Word Frequency Tables")
     add_spacelines(2)
     tab_analytics, tab_explore = st.tabs(['Analytics', 'Explore Corpora'])
@@ -2234,7 +2234,7 @@ def FreqTables(df_list, rhetoric_dims = [ 'ethos']):
         selected_rhet_dim = st.selectbox("Choose a rhetoric strategy for analysis", rhetoric_dims, index=0)
         selected_rhet_dim = selected_rhet_dim+"_label"
         add_spacelines(1)
-        df = df_list[0]
+        df = data_list[0]
 
         contents_radio_heroes = st.radio("Choose a category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
         df.Target = df.Target.astype('str')
@@ -2556,13 +2556,13 @@ def FreqTables(df_list, rhetoric_dims = [ 'ethos']):
 
 
 
-def FreqTablesLog(df_list, rhetoric_dims = ['ethos', 'logos']):
+def FreqTablesLog(data_list, rhetoric_dims = ['ethos', 'logos']):
     st.write("### Word Frequency Tables")
     add_spacelines(2)
 
     selected_rhet_dim = st.selectbox("Choose a rhetoric strategy for analysis", rhetoric_dims, index=0)
     if selected_rhet_dim == 'logos':
-        df = df_list[1]
+        df = data_list[1]
         df['locution_conclusion'] = df.locution_conclusion.apply(lambda x: " ".join( str(x).split(':')[1:]) )
         df['locution_premise'] = df.locution_premise.apply(lambda x: " ".join( str(x).split(':')[1:]) )
         df['sentence'] = df['locution_premise'].astype('str') + " " + df['locution_conclusion'].astype('str')
@@ -2573,7 +2573,7 @@ def FreqTablesLog(df_list, rhetoric_dims = ['ethos', 'logos']):
         df.connection = df.connection.map(map_naming)
 
     else:
-        df = df_list[0]
+        df = data_list[0]
         if not 'neutral' in df['ethos_label'].unique():
             df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
 
@@ -2783,14 +2783,14 @@ def FreqTablesLog(df_list, rhetoric_dims = ['ethos', 'logos']):
 
 
 
-def OddsRatio(df_list):
+def OddsRatio(data_list):
     st.write("### Lexical Analysis - Odds Ratio")
     add_spacelines(2)
     rhetoric_dims = ['ethos', ] # , 'pathos'
     selected_rhet_dim = st.selectbox("Choose a rhetoric strategy for analysis", rhetoric_dims, index=0)
     selected_rhet_dim = selected_rhet_dim+"_label"
     add_spacelines(1)
-    df = df_list[0]
+    df = data_list[0]
     df = df.drop_duplicates(subset = ['source', 'sentence'])
 
     contents_radio_heroes = st.radio("Category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
@@ -3187,7 +3187,7 @@ def PolarizingNetworksSub(df3):
 
 
 
-def UserProfileResponse(df_list):
+def UserProfileResponse(data_list):
     st.write("### Fellows - Devils")
     add_spacelines(1)
     meth_feldev = 'frequency' #st.radio("Choose a method of calculation", ('frequency', 'log-likelihood ratio') )
@@ -3195,7 +3195,7 @@ def UserProfileResponse(df_list):
     selected_rhet_dim = 'ethos'
     selected_rhet_dim = selected_rhet_dim+"_label"
     add_spacelines(1)
-    df = df_list[0]
+    df = data_list[0]
     df.source = df.source.astype('str')
     df.source = np.where(df.source == 'nan', 'user1', df.source)
     #df.source = "@" + df.source
@@ -3251,7 +3251,7 @@ def UserProfileResponse(df_list):
 
 
 
-def FellowsDevils(df_list):
+def FellowsDevils(data_list):
     st.write("### Fellows - Devils")
     add_spacelines(1)
     meth_feldev = 'frequency' # st.radio("Choose a method of calculation", ('frequency', 'log-likelihood ratio') )
@@ -3259,7 +3259,7 @@ def FellowsDevils(df_list):
     selected_rhet_dim = 'ethos'
     selected_rhet_dim = selected_rhet_dim+"_label"
     add_spacelines(1)
-    df = df_list[0]
+    df = data_list[0]
     df.source = df.source.astype('str')
     df.source = np.where(df.source == 'nan', 'user1', df.source)
     df.source = "@" + df.source
@@ -3691,11 +3691,11 @@ def generateWordCloud_log():
             selected_rhet_dim = selected_rhet_dim, label_cloud=label_cloud, threshold_cloud=threshold_cloud)
 
 
-def generateWordCloud_sub_log(df_list,
+def generateWordCloud_sub_log(data_list,
         selected_rhet_dim, label_cloud, threshold_cloud,
         rhetoric_dims = ['ethos', 'pathos'], an_type = 'ADU-based'):
 
-    df = df_list[0]
+    df = data_list[0]
     #st.write(df)
     add_spacelines(1)
     if selected_rhet_dim != 'logos':
@@ -3706,7 +3706,7 @@ def generateWordCloud_sub_log(df_list,
             df['pathos_label'] = df['pathos_label'].map(valence_mapping)
 
     elif selected_rhet_dim == 'logos':
-        df = df_list[-1] #pd.concat(df_list, axis=0, ignore_index=True)
+        df = data_list[-1] #pd.concat(data_list, axis=0, ignore_index=True)
         #st.write(df)
         df = df.dropna(subset = 'premise')
         df['sentence_lemmatized'] = df['premise'].astype('str') + " " + df['conclusion'].astype('str')
@@ -3806,24 +3806,24 @@ def generateWordCloud_sub_log(df_list,
 
 
 
-def generateWordCloud(df_list, rhetoric_dims = ['ethos', 'ethos & emotion'], an_type = 'ADU-based'):
+def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'ethos & emotion'], an_type = 'ADU-based'):
     #st.header(f" Text-Level Analytics ")
 
     selected_rhet_dim = st.selectbox("Choose a rhetoric category for a WordCloud", rhetoric_dims, index=0)
     add_spacelines(1)
     if selected_rhet_dim in ['pathos', 'sentiment']:
-        df = df_list[0]
+        df = data_list[0]
         label_cloud = st.radio("Choose a label for words in WordCloud", ('negative', 'positive'))
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label").replace("pathos", "pathos_label")
         label_cloud = label_cloud.replace("negative", "attack").replace("positive", "support")
 
     elif selected_rhet_dim == 'ethos':
-        df = df_list[0]
+        df = data_list[0]
         label_cloud = st.radio("Choose a label for words in WordCloud", ('attack', 'support'))
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label")
         label_cloud = label_cloud.replace("attack / negative", "attack").replace("support / positive", "support")
     else:
-        df = df_list[0]
+        df = data_list[0]
         label_cloud = st.radio("Choose a label of **ethos** for words in WordCloud", ('attack', 'support'))
         label_cloud_emo = st.radio("Choose a label of **emotion** for words in WordCloud", set( df.emotion.unique()))
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label")
@@ -3875,7 +3875,7 @@ def generateWordCloud(df_list, rhetoric_dims = ['ethos', 'ethos & emotion'], an_
             df['pathos_label'] = df['pathos_label'].map(valence_mapping)
 
     elif selected_rhet_dim == 'logos':
-        df = df_list[-1] #pd.concat(df_list, axis=0, ignore_index=True)
+        df = data_list[-1] #pd.concat(data_list, axis=0, ignore_index=True)
         df = df.dropna(subset = 'premise')
         df['sentence_lemmatized'] = df['premise'].astype('str') + " " + df['conclusion'].astype('str')
 
@@ -5597,10 +5597,10 @@ def distribution_plot_compareX(data_list):
             st.info("Function not supported for multiple corpora comparison.")
 
     with c_explore:
-        if len(df_list) > 1:
-            df = pd.concat( df_list, axis = 0, ignore_index = True )
+        if len(data_list) > 1:
+            df = pd.concat( data_list, axis = 0, ignore_index = True )
         else:
-            df = df_list[0].copy()
+            df = data_list[0].copy()
         st.write('### Explore corpora')
         dff_columns = [ 'sentence', 'source', 'ethos_label', 'emotion', 'sentiment', 'Target' ]# , 'conversation_id','date', 'pathos_label'
 
