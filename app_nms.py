@@ -5334,19 +5334,20 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
 
 
-        sns.set(font_scale=1.55, style='whitegrid')
+        sns.set(font_scale=1.5, style='whitegrid')
         maxval = df_dist_mix[col_unit].max()
         df_dist_mix['categories'] = df_dist_mix[dim10].astype('str') + ' ' + df_dist_mix[dim20].astype('str')
+        df_dist_mix = df_dist_mix.sort_values(by = col_unit, ascending=False)
         #st.write(df_dist_ethos_all)
         fg_mix=sns.catplot(kind='bar', data=df_dist_mix, y = 'categories', x = col_unit,
-                        dodge=True, legend = False, aspect = 1.4 )
+                        dodge=True, legend = False, aspect = 1.4, color = 'grey' )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
             plt.xticks(np.arange(0, 101, 20))
         else:
             plt.xlim(0, maxval+111)
             plt.xticks(np.arange(0, maxval+111, 100))            
-        plt.title(f'{dim10.capitalize()} & {dim20.capitalize()}')
+        fg_mix.set(title = f'{dim10.capitalize()} & {dim20.capitalize()} ')
         fg1_tb_mix = df_dist_mix.sort_values(by = col_unit, ascending = False)
 
 
@@ -5574,11 +5575,11 @@ def distribution_plot_compareX(data_list):
 
             fg2x, fg2x2, tb2x, tb2x2, _, _ = distribution_plot_compareX_sub_cross(data_list0 = data_list,
                         an_unit = contents_radio_unit, dim1 = 'sentiment', dim2 = 'ethos_label', target_type = contents_radio_targs)
-            ff1, ff2, = st.columns(2)
             st.pyplot(fg_mix)
             st.write(fg1_tb_mix)
             add_spacelines(2)
             
+            ff1, ff2, = st.columns(2)            
             with ff1:
                 st.pyplot(fg1x)
                 st.write(tb1x)
@@ -5604,11 +5605,11 @@ def distribution_plot_compareX(data_list):
 
             fg2x, fg2x2, tb2x, tb2x2, _, _ = distribution_plot_compareX_sub_cross(data_list0 = data_list,
                         an_unit = contents_radio_unit, dim1 = 'emotion', dim2 = 'ethos_label', target_type = contents_radio_targs)
-            ff1, ff2, = st.columns(2)
             st.pyplot(fg_mix)
             st.write(fg1_tb_mix)
             add_spacelines(2)
             
+            ff1, ff2, = st.columns(2)            
             with ff1:
                 st.pyplot(fg1x)
                 st.write(tb1x)
