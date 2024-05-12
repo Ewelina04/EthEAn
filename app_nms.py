@@ -5293,7 +5293,7 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
                 df_dist_mix['size'] = df_dist_mix['size'] / df.shape[0]
                 df_dist_mix['size'] = df_dist_mix['size'] * 100
                 df_dist_mix['size'] = df_dist_mix['size'].round(1)  
-                df_dist_mix = df_dist_mix.rename( columns = {'size': col_unit} )
+                df_dist_mix = df_dist_mix.rename( columns = {'size': col_unit, dim1:dim10, dim2:dim20} )
                 #st.write(df_dist_ethos)
                 
                 df_dist_ethos = pd.DataFrame(df.groupby([dim1])[dim2].value_counts(normalize = True).round(3)*100)
@@ -5336,17 +5336,16 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
 
         sns.set(font_scale=1.55, style='whitegrid')
         maxval = df_dist_mix[col_unit].max()
-        df_dist_mix['categories'] = df_dist_mix[dim1].astype('str') + ' ' + df_dist_mix[dim2].astype('str')
+        df_dist_mix['categories'] = df_dist_mix[dim10].astype('str') + ' ' + df_dist_mix[dim20].astype('str')
         #st.write(df_dist_ethos_all)
         fg_mix=sns.catplot(kind='bar', data=df_dist_mix, y = 'categories', x = col_unit,
-                        hue=dim20, dodge=True, palette = ['grey', 'darkgrey'], legend = True, aspect = 1.4 )
+                        dodge=True, legend = False, aspect = 1.4 )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
             plt.xticks(np.arange(0, 101, 20))
         else:
             plt.xlim(0, maxval+111)
-            plt.xticks(np.arange(0, maxval+111, 100))
-            
+            plt.xticks(np.arange(0, maxval+111, 100))            
         plt.title(f'{dim10.capitalize()} & {dim20.capitalize()}')
         fg1_tb_mix = df_dist_mix.sort_values(by = col_unit, ascending = False)
 
