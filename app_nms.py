@@ -4256,6 +4256,1691 @@ def ProfilesEntity_compare(data_list, selected_rhet_dim):
             st.write("""If the profile of a certain entity could not be categorised to either of the above categories, it is classified as Other.""")
 
 
+
+def TargetHeroScores_compare_freq(data_list, singl_an = True):
+    #st.write("### (Anti)-hero Frequency")
+    add_spacelines(1)
+    #contents_radio_heroes = st.radio("Category of the target of ethotic statements", ("direct ethos", "3rd party ethos"))#"both",
+    st.write("Choose category of the target of ethotic statements")
+    box_direct = st.checkbox("direct ethos", value = False)
+    box_3rd = st.checkbox("3rd party ethos", value = True)
+
+    contents_radio_unit = 'number' #st.radio("Unit of analysis", ("score", "number"))
+
+    up_data_dict = {}
+    up_data_dicth = {}
+    up_data_dictah = {}
+    target_shared = {}
+    up_data_dict_hist = {}
+
+    n = 0
+    for data in data_list:
+        df = data.copy()
+        ds = df['corpus'].iloc[0]
+
+        if not 'attack' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        df["Target"] = df["Target"].astype('str')
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df = df.drop_duplicates()
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+        target_shared[n] = set(df["Target"].unique())
+
+        if box_direct and not box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+        elif not box_direct and box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+
+        dd2_size = df.groupby(['Target'], as_index=False).size()
+        dd2_size = dd2_size[dd2_size['size'] > 1]
+        adj_target = dd2_size['Target'].unique()
+
+        dd = pd.DataFrame(df.groupby(['Target'])['ethos_label'].value_counts(normalize=False))
+        dd.columns = ['value']
+        dd = dd.reset_index()
+        dd = dd[dd.Target.isin(adj_target)]
+        dd = dd[dd.ethos_label != 'neutral']
+        dd_hero = dd[dd.ethos_label == 'support']
+        dd_antihero = dd[dd.ethos_label == 'attack']
+
+        dd2 = pd.DataFrame({'Target': dd.Target.unique()})
+        dd2_hist = dd2.copy()
+        dd2anti_scores = []
+        dd2hero_scores = []
+
+        if contents_radio_unit == 'score':
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            #dd2['score'] = dd2['score'] * 100
+            #dd2['score'] = dd2['score'].round()
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            if len(dd2_dist) == 1:
+                if not 'heroes' in dd2_dist.heroes.unique():
+                    dd2_dist.loc[len(dd2_dist)] = ['heroes', 0]
+                else:
+                    dd2_dist.loc[len(dd2_dist)] = ['villains', 0]
+
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+        else:
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            #dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=False)).reset_index()
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            if len(dd2_dist) == 1:
+                if not 'heroes' in dd2_dist.heroes.unique():
+                    dd2_dist.loc[len(dd2_dist)] = ['heroes', 0]
+                else:
+                    dd2_dist.loc[len(dd2_dist)] = ['villains', 0]
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+    df_dist_ethos_all = up_data_dict[0].copy()
+    for k in range(int(len(up_data_dict.keys()))-1):
+        k_sub = k+1
+        df_dist_ethos_all = pd.concat([df_dist_ethos_all, up_data_dict[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.5, style='whitegrid')
+    df = pd.concat( data_list, axis=0, ignore_index=True )
+    df.Target = df.Target.astype('str')
+    if not 'attack' in df['ethos_label'].unique():
+        df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+    df_target_all = pd.DataFrame(df[df.ethos_label != 'neutral']['ethos_label'].value_counts(normalize=True).round(2)*100).reset_index()
+    df_target_all.columns = ['ethos', 'percentage']
+
+    f_dist_ethos = sns.catplot(kind='bar', data = df_dist_ethos_all, height=5, aspect=1.2,
+                    x = 'heroes', y = 'percentage', hue = 'heroes', dodge=False, legend = False,
+                    palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                    col = 'corpus')
+
+    f_dist_ethos.set(ylim=(0, 110), xlabel = '')
+    f_dist_ethos.map(plt.axhline, y=df_target_all[df_target_all.ethos == 'attack']['percentage'].iloc[0], ls='--', c='red', alpha=0.75, linewidth=1.85, label = 'baseline villains')
+    f_dist_ethos.map(plt.axhline, y=df_target_all[df_target_all.ethos == 'support']['percentage'].iloc[0], ls='--', c='green', alpha=0.75, linewidth=1.85, label = 'baseline heroes')
+    plt.legend(loc='upper right', fontsize=13, bbox_to_anchor = (1.03, 0.9) )
+
+    for ax in f_dist_ethos.axes.ravel():
+        for p in ax.patches:
+            ax.annotate(format(p.get_height(), '.0f'), (p.get_x() + p.get_width() / 2., p.get_height()),
+                            ha = 'center', va = 'center', xytext = (0, 7), textcoords = 'offset points')
+    add_spacelines(1)
+
+
+    df_dist_hist_all = up_data_dict_hist[0].copy()
+    for k in range(int(len(up_data_dict_hist.keys()))-1):
+        k_sub = k+1
+        df_dist_hist_all = pd.concat([df_dist_hist_all, up_data_dict_hist[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+
+    df_dist_hist_all = df_dist_hist_all.rename(columns = {'ethos_label':'label'})
+    sns.set(font_scale=1, style='whitegrid')
+    f_dist_ethoshist = sns.catplot(kind='strip', data = df_dist_hist_all, height=4, aspect=1.25,
+                    y = str(contents_radio_unit), hue = 'label', dodge=False, s=25, alpha=0.75,
+                    palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                    x = 'corpus')
+    if contents_radio_unit == 'score':
+        f_dist_ethoshist.set(xlabel = '', title = 'Distribution of villain scores')
+    else:
+        f_dist_ethoshist.set(xlabel = '', title = 'Number of (un)-favourable appeals to villains & heroes')
+
+
+    heroes_tab1, heroes_tab2, heroes_tab_explore = st.tabs(['Bar-chart', 'Tables',  'Cases'])
+
+    with heroes_tab2:
+        add_spacelines()
+        cops_names = df_dist_hist_all.corpus.unique()
+        cols_columns = st.columns(len(cops_names))
+        for n, c in enumerate(cols_columns):
+            with c:
+                df_dist_hist_all_0 = df_dist_hist_all[df_dist_hist_all.corpus == cops_names[n]]
+
+                #st.write(cops_names[n])
+                df_dist_hist_all_0 = df_dist_hist_all_0.sort_values(by = 'score', ascending=True)
+                df_dist_hist_all_0 = df_dist_hist_all_0.reset_index(drop=True)
+                df_dist_hist_all_0 = df_dist_hist_all_0.set_index('Target').reset_index()
+                df_dist_hist_all_0.index += 1
+                df_dist_hist_all_02 = pd.DataFrame(df_dist_hist_all_0.label.value_counts()).reset_index()
+                if df_dist_hist_all_02.shape[0] == 1:
+
+                    if not 'heroes' in df_dist_hist_all_02.label.unique():
+                        df_dist_hist_all_02.loc[len(df_dist_hist_all_02)] = ['heroes', 0]
+                    else:
+                        df_dist_hist_all_02.loc[len(df_dist_hist_all_02)] = ['villains', 0]
+
+                st.write( "##### Summary ", df_dist_hist_all_0.corpus.iloc[0] )
+                st.write( df_dist_hist_all_02.style.apply( colorred, axis=1 ) )
+
+                add_spacelines(2)
+                st.write( "##### Detailed", df_dist_hist_all_0.corpus.iloc[0]  )
+                st.write(df_dist_hist_all_0.style.apply( highlight, axis=1 ))
+
+                df_dist_hist_all_0.Target = df_dist_hist_all_0.Target.apply(lambda x: "_".join(x.split()))
+
+                #st.write( "##### Cloud: names of heroes and villains" )
+                #f_att0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'villains'].Target.values), 800, 500, '#1E1E1E', 'Reds')
+                #f_sup0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'heroes'].Target.values), 800, 500, '#1E1E1E', 'Greens')
+
+                #st.pyplot(f_sup0)
+                #add_spacelines(2)
+                #st.pyplot(f_att0)
+
+
+    with heroes_tab1:
+        add_spacelines(1)
+        st.write( "##### Summary " )
+        st.pyplot(f_dist_ethos)
+
+        add_spacelines(2)
+        st.write( "##### Detailed " )
+
+        #st.write(df_dist_hist_all)
+        #st.write(df_dist_hist_all)
+
+        #cutoff_n = st.slider('Select a cut-off number', 1, 25, 2)
+        cutoff_neg = st.slider('Select a cut-off number for villains', 1, 25, 4)
+        cutoff_pos = st.slider('Select a cut-off number for heroes', 1, 25, 2)
+        cc = df_dist_hist_all.corpus.unique()
+        #st.write(df_dist_hist_all)
+
+        df_dist_hist_all = df_dist_hist_all[ ( (df_dist_hist_all.label == 'heroes') & (df_dist_hist_all.number > int(cutoff_pos)) ) |\
+                                            ( (df_dist_hist_all.label == 'villains') & (df_dist_hist_all.number > int(cutoff_neg)) ) ]
+
+
+        height_n = 7
+        sns.set(font_scale=1.5, style='whitegrid')
+        if df_dist_hist_all.Target.nunique() > 20:
+                height_n = int(df_dist_hist_all.Target.nunique() / 3.2 )
+                sns.set(font_scale=1.7, style='whitegrid')
+        #st.write(df_dist_hist_all)
+        df_dist_hist_all = df_dist_hist_all.sort_values(by = [ 'corpus', 'label', 'number', ], ascending=[True, False, False])
+        df_dist_ethos_all2_base = df_dist_hist_all[contents_radio_unit].mean().round(2)
+
+        df_dist_hist_all = df_dist_hist_all.melt(['Target', 'label', 'corpus'])
+
+        #df_dist_hist_all = df_dist_hist_all.sort_values(by = [ 'corpus', 'variable', 'label', 'value' ], ascending=[True,True, False, False])
+
+        #df_dist_hist_all['corpus'] = ds
+        f_dist_ethoshist_barh = sns.catplot(kind='bar', data = df_dist_hist_all[df_dist_hist_all.variable == contents_radio_unit],
+                        height=height_n, aspect=1.3,
+                        x = 'value', y = 'Target', hue = 'label', dodge=False,
+                        palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                        col = 'corpus', sharey=False, sharex=True, row = 'variable')
+        if contents_radio_unit == 'score':
+            f_dist_ethoshist_barh.set(ylabel = '', )
+        else:
+            f_dist_ethoshist_barh.set(ylabel = '', )
+
+        #f_dist_ethoshist_barh.map(plt.axvline, x=df_dist_ethos_all2_base, ls='--', c='black', alpha=0.75, linewidth=2, label = 'baseline' )
+        #plt.tight_layout(pad=0.5)
+        #sns.move_legend(f_dist_ethoshist_barh, bbox_to_anchor = (0.54, 1.1), ncols=3, loc='upper center',)
+        f_dist_ethoshist_barh._legend.remove()
+        if "&" in df_dist_hist_all.corpus.iloc[0]:
+            xv = 0.4
+        else:
+            xv = -0.10
+        plt.legend(bbox_to_anchor = (xv, 1.3), ncols=3, loc='upper center',)
+
+        st.pyplot(f_dist_ethoshist_barh)
+
+
+    with heroes_tab_explore:
+        st.write('### Cases')
+
+        if len(data_list) > 1:
+            df = pd.concat( data_list, axis=0, ignore_index=True )
+        else:
+            df = data_list[0]
+
+        df["Target"] = df["Target"].astype('str')
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df = df.drop_duplicates()
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+
+        dff_columns = [ 'sentence', 'source', 'ethos_name', 'Target',  'emotion',]# , 'conversation_id','date'
+        df['ethos_name'] = df['ethos_label']
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_name'] = df['ethos_label'].map(ethos_mapping)
+
+        df = df.dropna(how='all', axis=1)
+        df[df.columns] = df[df.columns].astype('str')
+        dff = df.copy()
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[-2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        dff_selected = dff_selected.drop_duplicates(subset = ['sentence'] )
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
+
+
+
+def TargetHeroScores_compare_scor(data_list, singl_an = True):
+    #st.write("### (Anti)-hero Score")
+    add_spacelines(1)
+    #contents_radio_heroes = st.radio("Category of the target of ethotic statements", ( "direct ethos", "3rd party ethos"))
+    st.write("Choose category of the target of ethotic statements")
+    box_direct = st.checkbox("direct ethos", value = False)
+    box_3rd = st.checkbox("3rd party ethos", value = True)
+    contents_radio_unit = 'score' #st.radio("Unit of analysis", ("score", "number"))
+
+    up_data_dict = {}
+    up_data_dicth = {}
+    up_data_dictah = {}
+    target_shared = {}
+    up_data_dict_hist = {}
+
+    n = 0
+    for data in data_list:
+        df = data.copy()
+        ds = df['corpus'].iloc[0]
+        if not 'attack' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        df["Target"] = df["Target"].astype('str')
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+        df = df.drop_duplicates()
+        target_shared[n] = set(df["Target"].unique())
+
+        if box_direct and not box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+        elif not box_direct and box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+
+        dd2_size = df.groupby(['Target'], as_index=False).size()
+        dd2_size = dd2_size[dd2_size['size'] > 1]
+        adj_target = dd2_size['Target'].unique()
+
+        dd = pd.DataFrame(df.groupby(['Target'])['ethos_label'].value_counts(normalize=False))
+        dd.columns = ['value']
+        dd = dd.reset_index()
+        dd = dd[dd.Target.isin(adj_target)]
+        dd = dd[dd.ethos_label != 'neutral']
+        dd_hero = dd[dd.ethos_label == 'support']
+        dd_antihero = dd[dd.ethos_label == 'attack']
+
+        dd2 = pd.DataFrame({'Target': dd.Target.unique()})
+        dd2_hist = dd2.copy()
+        dd2anti_scores = []
+        dd2hero_scores = []
+
+        if contents_radio_unit == 'score':
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            #dd2['score'] = dd2['score'] * 100
+            #dd2['score'] = dd2['score'].round()
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            if len(dd2_dist) == 1:
+                if not 'heroes' in dd2_dist.heroes.unique():
+                    dd2_dist.loc[len(dd2_dist)] = ['heroes', 0]
+                else:
+                    dd2_dist.loc[len(dd2_dist)] = ['villains', 0]
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+        else:
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            #dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=False)).reset_index()
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            if len(dd2_dist) == 1:
+                if not 'heroes' in dd2_dist.heroes.unique():
+                    dd2_dist.loc[len(dd2_dist)] = ['heroes', 0]
+                else:
+                    dd2_dist.loc[len(dd2_dist)] = ['villains', 0]
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+    df_dist_ethos_all = up_data_dict[0].copy()
+    for k in range(int(len(up_data_dict.keys()))-1):
+        k_sub = k+1
+        df_dist_ethos_all = pd.concat([df_dist_ethos_all, up_data_dict[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.5, style='whitegrid')
+    df = pd.concat( data_list, axis=0, ignore_index=True )
+    df.Target = df.Target.astype('str')
+    if not 'attack' in df['ethos_label'].unique():
+        df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+    df_target_all = pd.DataFrame(df[df.ethos_label != 'neutral']['ethos_label'].value_counts(normalize=True).round(2)*100).reset_index()
+    df_target_all.columns = ['ethos', 'percentage']
+
+    f_dist_ethos = sns.catplot(kind='bar', data = df_dist_ethos_all, height=5, aspect=1.2,
+                    x = 'heroes', y = 'percentage', hue = 'heroes', dodge=False, legend = False,
+                    palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                    col = 'corpus')
+
+    f_dist_ethos.set(ylim=(0, 110), xlabel = '')
+    f_dist_ethos.map(plt.axhline, y=df_target_all[df_target_all.ethos == 'attack']['percentage'].iloc[0], ls='--', c='red', alpha=0.75, linewidth=1.85, label = 'baseline villains')
+    f_dist_ethos.map(plt.axhline, y=df_target_all[df_target_all.ethos == 'support']['percentage'].iloc[0], ls='--', c='green', alpha=0.75, linewidth=1.85, label = 'baseline heroes')
+    plt.legend(loc='upper right', fontsize=13, bbox_to_anchor = (1.03, 0.9))
+
+    for ax in f_dist_ethos.axes.ravel():
+        for p in ax.patches:
+            ax.annotate(format(p.get_height(), '.0f'), (p.get_x() + p.get_width() / 2., p.get_height()),
+                            ha = 'center', va = 'center', xytext = (0, 7), textcoords = 'offset points')
+    add_spacelines(1)
+
+
+    df_dist_hist_all = up_data_dict_hist[0].copy()
+    for k in range(int(len(up_data_dict_hist.keys()))-1):
+        k_sub = k+1
+        df_dist_hist_all = pd.concat([df_dist_hist_all, up_data_dict_hist[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+
+    df_dist_hist_all = df_dist_hist_all.rename(columns = {'ethos_label':'label'})
+
+    sns.set(font_scale=1, style='whitegrid')
+    df_dist_hist_all_base = df_dist_hist_all.groupby('label', as_index=False).score.mean().round(2)
+
+    f_dist_ethoshist = sns.catplot(kind='strip', data = df_dist_hist_all, height=4, aspect=1.25,
+                    y = str(contents_radio_unit), hue = 'label', dodge=False, s=55, alpha=0.85, edgecolor = 'black', linewidth = 0.4,
+                    palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                    x = 'corpus', )
+    sns.move_legend(f_dist_ethoshist, frameon = True, loc = 'upper right', bbox_to_anchor = (0.98, 0.72))
+    #f_dist_ethoshist.map(plt.axhline, y=df_dist_hist_all_base[df_dist_hist_all_base.label=='heroes'].score.iloc[0], ls='--', c='green', alpha=0.75, linewidth=1.85, label = 'baseline heroes')
+    #f_dist_ethoshist.map(plt.axhline, y=df_dist_hist_all_base[df_dist_hist_all_base.label=='villains'].score.iloc[0], ls='--', c='red', alpha=0.75, linewidth=1.85, label = 'baseline villains')
+
+    if contents_radio_unit == 'score':
+        f_dist_ethoshist.set(xlabel = '', title = 'Distribution of villain scores')
+    else:
+        f_dist_ethoshist.set(xlabel = '', title = 'Number of (un)-favourable appeals to villains & heroes')
+
+
+    heroes_tab1, heroes_tab2, heroes_tab_explore = st.tabs(['Bar-chart', 'Tables',  'Cases'])
+
+    with heroes_tab2:
+        add_spacelines()
+
+        cops_names = df_dist_hist_all.corpus.unique()
+        cols_columns = st.columns(len(cops_names))
+        for n, c in enumerate(cols_columns):
+            with c:
+                df_dist_hist_all_0 = df_dist_hist_all[df_dist_hist_all.corpus == cops_names[n]]
+
+                #st.write(cops_names[n])
+                df_dist_hist_all_0 = df_dist_hist_all_0.sort_values(by = 'score', ascending=True)
+                df_dist_hist_all_0 = df_dist_hist_all_0.reset_index(drop=True)
+                df_dist_hist_all_0 = df_dist_hist_all_0.set_index('Target').reset_index()
+                df_dist_hist_all_0.index += 1
+                df_dist_hist_all_02 = pd.DataFrame(df_dist_hist_all_0.label.value_counts()).reset_index()
+                if df_dist_hist_all_02.shape[0] == 1:
+                    if not 'heroes' in df_dist_hist_all_02.label.unique():
+                        df_dist_hist_all_02.loc[len(df_dist_hist_all_02)] = ['heroes', 0]
+                    else:
+                        df_dist_hist_all_02.loc[len(df_dist_hist_all_02)] = ['villains', 0]
+
+
+                st.write( "##### Summary ", df_dist_hist_all_0.corpus.iloc[0] )
+                st.write( df_dist_hist_all_02.style.apply( colorred, axis=1 ) )
+
+                add_spacelines(2)
+                st.write( "##### Detailed", df_dist_hist_all_0.corpus.iloc[0]  )
+                st.write(df_dist_hist_all_0.style.apply( highlight, axis=1 ))
+
+                df_dist_hist_all_0.Target = df_dist_hist_all_0.Target.apply(lambda x: "_".join(x.split()))
+
+                #st.write( "##### Cloud: names of heroes and villains" )
+                #f_att0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'villains'].Target.values), 800, 500, '#1E1E1E', 'Reds')
+                #f_sup0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'heroes'].Target.values), 800, 500, '#1E1E1E', 'Greens')
+
+                #st.pyplot(f_sup0)
+                #add_spacelines(2)
+                #st.pyplot(f_att0)
+
+
+    with heroes_tab1:
+        add_spacelines(1)
+        st.write( "##### Summary" )
+        st.pyplot(f_dist_ethoshist)
+
+        add_spacelines(2)
+        st.write( "##### Detailed" )
+        add_spacelines(1)
+        #st.write(df_dist_hist_all)
+        cutoff_neg = st.slider('Select a cut-off number for villains', 1, 25, 4)
+        cutoff_pos = st.slider('Select a cut-off number for heroes', 1, 25, 2)
+        cc = df_dist_hist_all.corpus.unique()
+        #st.write(df_dist_hist_all)
+        df_dist_hist_all = df_dist_hist_all[ ( (df_dist_hist_all.label == 'heroes') & (df_dist_hist_all.number > int(cutoff_pos)) ) |\
+                                            ( (df_dist_hist_all.label == 'villains') & (df_dist_hist_all.number > int(cutoff_neg)) ) ]
+
+        #st.write(df_dist_hist_all)
+
+        df_dist_hist_all = df_dist_hist_all.sort_values(by = [ 'corpus', 'label', 'number', ], ascending=[True, False, False])
+        df_dist_ethos_all2_base = df_dist_hist_all[contents_radio_unit].mean().round(2)
+
+        df_dist_hist_all = df_dist_hist_all.melt(['Target', 'label', 'corpus'])
+
+        #df_dist_hist_all = df_dist_hist_all.sort_values(by = [ 'corpus', 'variable', 'label', 'value' ], ascending=[True,True, False, False])
+
+        sns.set(font_scale=1.35, style='whitegrid')
+        height_n = int(df_dist_hist_all.Target.nunique() / 3.2 )
+        if df_dist_hist_all.Target.nunique() < 16:
+                height_n = 9
+                sns.set(font_scale=1.2, style='whitegrid')
+
+        f_dist_ethoshist_barh = sns.catplot(kind='bar',
+                        data = df_dist_hist_all[df_dist_hist_all.variable == contents_radio_unit], height=height_n, aspect=1.3,
+                        x = 'value', y = 'Target', hue = 'label', dodge=False,# legend=False,
+                        palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                        col = 'corpus', sharey=False, sharex=True, row = 'variable')
+
+        f_dist_ethoshist_barh.set(ylabel = '', )
+        #f_dist_ethoshist_barh.map(plt.axvline, x=df_dist_ethos_all2_base, ls='--', c='black', alpha=0.75, linewidth=2.5, label = 'baseline' )
+        hatches = ["//",  " "]
+        # Loop over the bars
+        #for hatch, patch in zip(hatches, f_dist_ethoshist_barh.artists):
+        #    patch.set_hatch(hatch)
+
+        #plt.tight_layout(pad=0.5)
+        #sns.move_legend(f_dist_ethoshist_barh, bbox_to_anchor = (0.54, 1.1), ncols=3, loc='upper center', )
+        f_dist_ethoshist_barh._legend.remove()
+        if "&" in df_dist_hist_all.corpus.iloc[0]:
+            xv = 0.4
+        else:
+            xv = -0.10
+        plt.legend(bbox_to_anchor = (xv, 1.3), ncols=3, loc='upper center',)
+        st.pyplot(f_dist_ethoshist_barh)
+
+
+    with heroes_tab_explore:
+        st.write('### Cases')
+
+        if len(data_list) > 1:
+            df = pd.concat( data_list, axis=0, ignore_index=True )
+        else:
+            df = data_list[0]
+
+        df.Target = df.Target.astype('str')
+        df = df.drop_duplicates()
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df = df.drop_duplicates()
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+        dff_columns = [ 'sentence', 'source', 'ethos_name', 'Target',   'emotion']# , 'conversation_id','date'
+
+        df['ethos_name'] = df['ethos_label']
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_name'] = df['ethos_label'].map(ethos_mapping)
+        dff = df.copy()
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[-2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        dff_selected = dff_selected.drop_duplicates(subset = ['sentence'] )
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
+
+
+
+
+
+
+def TargetHeroScores_compare_scor2(data_list, singl_an = True):
+    #st.write("### (Anti)-hero Score")
+    add_spacelines(1)
+    #contents_radio_heroes = st.radio("Category of the target of ethotic statements", ( "direct ethos", "3rd party ethos"))
+    st.write("Choose category of the target of ethotic statements")
+    box_direct = st.checkbox("direct ethos", value = False)
+    box_3rd = st.checkbox("3rd party ethos", value = True)
+    contents_radio_unit = 'score' #st.radio("Unit of analysis", ("score", "number"))
+
+    up_data_dict = {}
+    up_data_dicth = {}
+    up_data_dictah = {}
+    target_shared = {}
+    up_data_dict_hist = {}
+
+    n = 0
+    for data in data_list:
+        df = data.copy()
+        ds = df['corpus'].iloc[0]
+        df = df.drop_duplicates()
+        if not 'attack' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        df["Target"] = df["Target"].astype('str')
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+        target_shared[n] = set(df["Target"].unique())
+
+        if box_direct and not box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+        elif not box_direct and box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+
+        dd2_size = df.groupby(['Target'], as_index=False).size()
+        dd2_size = dd2_size[dd2_size['size'] > 1]
+        adj_target = dd2_size['Target'].unique()
+
+        dd = pd.DataFrame(df.groupby(['Target'])['ethos_label'].value_counts(normalize=False))
+        dd.columns = ['value']
+        dd = dd.reset_index()
+        dd = dd[dd.Target.isin(adj_target)]
+        dd = dd[dd.ethos_label != 'neutral']
+        dd_hero = dd[dd.ethos_label == 'support']
+        dd_antihero = dd[dd.ethos_label == 'attack']
+
+        dd2 = pd.DataFrame({'Target': dd.Target.unique()})
+        dd2_hist = dd2.copy()
+        dd2anti_scores = []
+        dd2hero_scores = []
+
+        dd2['score'] = np.nan
+        dd2['number'] = np.nan
+        dd2['appeals'] = np.nan
+        for t in dd.Target.unique():
+            try:
+                h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+            except:
+                h = 0
+            try:
+                ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+            except:
+                ah = 0
+            dd2hero_scores.append(h)
+            dd2anti_scores.append(ah)
+            i = dd2[dd2.Target == t].index
+            dd2.loc[i, 'score'] = (ah - h) / (ah + h)
+            if h > ah:
+                dd2.loc[i, 'number'] = h
+                dd2.loc[i, 'appeals'] = (ah + h)
+                dd2.loc[i, 'ethos_label'] = 'heroes'
+            elif h < ah:
+                dd2.loc[i, 'number'] = ah
+                dd2.loc[i, 'ethos_label'] = 'villains'
+                dd2.loc[i, 'appeals'] = (ah + h)
+            else:
+                dd2.loc[i, 'number'] = 0
+                dd2.loc[i, 'ethos_label'] = 'nn'
+                dd2.loc[i, 'appeals'] = (ah + h)
+
+        dd2 = dd2[dd2.score != 0]
+        dd2.score = dd2.score * -1
+        dd2 = dd2[dd2.ethos_label != 'nn']
+        #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+        #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+        dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+        #dd2['score'] = dd2['score'] * 100
+        #dd2['score'] = dd2['score'].round()
+        dd2['corpus'] = ds
+        #st.write(dd2)
+        up_data_dict_hist[n] = dd2
+        #st.write(dd2)
+        #st.stop()
+        #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+        dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+        dd2_dist.columns = ['heroes', 'percentage']
+        if len(dd2_dist) == 1:
+            if not 'heroes' in dd2_dist.heroes.unique():
+                dd2_dist.loc[len(dd2_dist)] = ['heroes', 0]
+            else:
+                dd2_dist.loc[len(dd2_dist)] = ['villains', 0]
+        dd2_dist['corpus'] = ds
+        up_data_dict[n] = dd2_dist
+        up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+        up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+        n += 1
+
+    df_dist_ethos_all = up_data_dict[0].copy()
+    for k in range(int(len(up_data_dict.keys()))-1):
+        k_sub = k+1
+        df_dist_ethos_all = pd.concat([df_dist_ethos_all, up_data_dict[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.5, style='whitegrid')
+    df = pd.concat( data_list, axis=0, ignore_index=True )
+    df.Target = df.Target.astype('str')
+    if not 'attack' in df['ethos_label'].unique():
+        df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+    df_target_all = pd.DataFrame(df[df.ethos_label != 'neutral']['ethos_label'].value_counts(normalize=True).round(2)*100).reset_index()
+    df_target_all.columns = ['ethos', 'percentage']
+
+    f_dist_ethos = sns.catplot(kind='bar', data = df_dist_ethos_all, height=5, aspect=1.2,
+                    x = 'heroes', y = 'percentage', hue = 'heroes', dodge=False, legend = False,
+                    palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                    col = 'corpus')
+
+    f_dist_ethos.set(ylim=(0, 110), xlabel = '')
+    f_dist_ethos.map(plt.axhline, y=df_target_all[df_target_all.ethos == 'attack']['percentage'].iloc[0], ls='--', c='red', alpha=0.75, linewidth=1.85, label = 'baseline villains')
+    f_dist_ethos.map(plt.axhline, y=df_target_all[df_target_all.ethos == 'support']['percentage'].iloc[0], ls='--', c='green', alpha=0.75, linewidth=1.85, label = 'baseline heroes')
+    plt.legend(loc='upper right', fontsize=13, bbox_to_anchor = (1.03, 0.9))
+
+    for ax in f_dist_ethos.axes.ravel():
+        for p in ax.patches:
+            ax.annotate(format(p.get_height(), '.0f'), (p.get_x() + p.get_width() / 2., p.get_height()),
+                            ha = 'center', va = 'center', xytext = (0, 7), textcoords = 'offset points')
+    add_spacelines(1)
+
+
+
+
+    df_dist_hist_all = up_data_dict_hist[0].copy()
+    for k in range(int(len(up_data_dict_hist.keys()))-1):
+        k_sub = k+1
+        df_dist_hist_all = pd.concat([df_dist_hist_all, up_data_dict_hist[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+
+    df_dist_hist_all = df_dist_hist_all.rename(columns = {'ethos_label':'label'})
+
+    sns.set(font_scale=1, style='whitegrid')
+    df_dist_hist_all_base = df_dist_hist_all.groupby('label', as_index=False).score.mean().round(2)
+
+    f_dist_ethoshist = sns.catplot(kind='strip', data = df_dist_hist_all, height=4, aspect=1.25,
+                    y = str(contents_radio_unit), hue = 'label', dodge=False, s=55, alpha=0.85, edgecolor = 'black', linewidth = 0.4,
+                    palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                    x = 'corpus', )
+    #f_dist_ethoshist.map(plt.axhline, y=df_dist_hist_all_base[df_dist_hist_all_base.label=='heroes'].score.iloc[0], ls='--', c='green', alpha=0.75, linewidth=1.85, label = 'baseline heroes')
+    #f_dist_ethoshist.map(plt.axhline, y=df_dist_hist_all_base[df_dist_hist_all_base.label=='villains'].score.iloc[0], ls='--', c='red', alpha=0.75, linewidth=1.85, label = 'baseline villains')
+    sns.move_legend(f_dist_ethoshist, frameon = True, loc = 'upper right', bbox_to_anchor = (0.98, 0.72))
+
+    if contents_radio_unit == 'score':
+        f_dist_ethoshist.set(xlabel = '', title = 'Distribution of villain scores')
+    else:
+        f_dist_ethoshist.set(xlabel = '', title = 'Number of (un)-favourable appeals to villains & heroes')
+
+
+    heroes_tab1, heroes_tab2, heroes_tab_explore = st.tabs(['Bar-chart', 'Tables',  'Cases'])
+
+    with heroes_tab2:
+        add_spacelines()
+
+        cops_names = df_dist_hist_all.corpus.unique()
+        cols_columns = st.columns(len(cops_names))
+        for n, c in enumerate(cols_columns):
+            with c:
+                df_dist_hist_all_0 = df_dist_hist_all[df_dist_hist_all.corpus == cops_names[n]]
+
+                #st.write(cops_names[n])
+                df_dist_hist_all_0 = df_dist_hist_all_0.sort_values(by = 'score', ascending=True)
+                df_dist_hist_all_0 = df_dist_hist_all_0.reset_index(drop=True)
+                df_dist_hist_all_0 = df_dist_hist_all_0.set_index('Target').reset_index()
+                df_dist_hist_all_0.index += 1
+                df_dist_hist_all_02 = pd.DataFrame(df_dist_hist_all_0.label.value_counts()).reset_index()
+                if df_dist_hist_all_02.shape[0] == 1:
+                    if not 'heroes' in df_dist_hist_all_02.label.unique():
+                        df_dist_hist_all_02.loc[len(df_dist_hist_all_02)] = ['heroes', 0]
+                    else:
+                        df_dist_hist_all_02.loc[len(df_dist_hist_all_02)] = ['villains', 0]
+
+
+                st.write( "##### Summary ", df_dist_hist_all_0.corpus.iloc[0] )
+                st.write( df_dist_hist_all_02.style.apply( colorred, axis=1 ) )
+
+                def highlight2(s):
+                    if s.score < 0:
+                        return ['background-color: red'] * len(s)
+                    elif s.score > 0:
+                        return ['background-color: green'] * len(s)
+                    else:
+                        return ['background-color: white'] * len(s)
+
+
+                add_spacelines(2)
+                st.write( "##### Detailed", df_dist_hist_all_0.corpus.iloc[0]  )
+                st.write(df_dist_hist_all_0.style.apply( highlight2, axis=1 ))
+
+                df_dist_hist_all_0.Target = df_dist_hist_all_0.Target.apply(lambda x: "_".join(x.split()))
+
+                #st.write( "##### Cloud: names of heroes and villains" )
+                #f_att0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'villains'].Target.values), 800, 500, '#1E1E1E', 'Reds')
+                #f_sup0, _ = make_word_cloud(" ".join(df_dist_hist_all_0[df_dist_hist_all_0.label == 'heroes'].Target.values), 800, 500, '#1E1E1E', 'Greens')
+
+                #st.pyplot(f_sup0)
+                #add_spacelines(2)
+                #st.pyplot(f_att0)
+
+
+    with heroes_tab1:
+        add_spacelines(1)
+        st.write( "##### Summary" )
+        st.pyplot(f_dist_ethoshist)
+
+        add_spacelines(2)
+        st.write( "##### Detailed" )
+        add_spacelines(1)
+        #st.write(df_dist_hist_all)
+        cutoff_neg = st.slider('Select a cut-off number for villains', 1, 25, 4)
+        cutoff_pos = st.slider('Select a cut-off number for heroes', 1, 25, 2)
+        cc = df_dist_hist_all.corpus.unique()
+        #st.write(df_dist_hist_all)
+        df_dist_hist_all = df_dist_hist_all[ ( (df_dist_hist_all.label == 'heroes') & (df_dist_hist_all.number > int(cutoff_pos)) ) |\
+                                            ( (df_dist_hist_all.label == 'villains') & (df_dist_hist_all.number > int(cutoff_neg)) ) ]
+
+        df_dist_hist_all = df_dist_hist_all.sort_values(by = [ 'corpus', 'label', 'number', ], ascending=[True, False, False])
+        df_dist_ethos_all2_base = df_dist_hist_all[contents_radio_unit].mean().round(2)
+
+        df_dist_hist_all = df_dist_hist_all.melt(['Target', 'label', 'corpus'])
+
+        #df_dist_hist_all = df_dist_hist_all.sort_values(by = [ 'corpus', 'variable', 'label', 'value' ], ascending=[True,True, False, False])
+
+        sns.set(font_scale=1.4, style='whitegrid')
+        height_n = int(df_dist_hist_all.Target.nunique() / 3.2 )
+        if df_dist_hist_all.Target.nunique() < 15:
+                height_n = 9
+                sns.set(font_scale=1.1, style='whitegrid')
+
+        f_dist_ethoshist_barh = sns.catplot(kind='bar',
+                        data = df_dist_hist_all[df_dist_hist_all.variable == contents_radio_unit], height=height_n, aspect=1.1,
+                        x = 'value', y = 'Target', hue = 'label', dodge=False,# legend=False,
+                        palette = {'villains':'#FF5656', 'heroes':'#078120'},
+                        col = 'corpus', sharey=False, sharex=True, row = 'variable')
+
+        f_dist_ethoshist_barh.set(ylabel = '', xlim = (-1, 1))
+        #f_dist_ethoshist_barh.map(plt.axvline, x=df_dist_ethos_all2_base, ls='--', c='black', alpha=0.75, linewidth=2, label = 'baseline')
+
+        #plt.tight_layout(pad=0.5)
+        #sns.move_legend(f_dist_ethoshist_barh, bbox_to_anchor = (0.54, 1.1), ncols=3, loc='upper center', )
+        f_dist_ethoshist_barh._legend.remove()
+        if "&" in df_dist_hist_all.corpus.iloc[0]:
+            xv = 0.4
+        else:
+            xv = -0.10
+        plt.legend(bbox_to_anchor = (xv, 1.2), ncols=3, loc='upper center',)
+        st.pyplot(f_dist_ethoshist_barh)
+
+
+    with heroes_tab_explore:
+        st.write('### Cases')
+
+        if len(data_list) > 1:
+            df = pd.concat( data_list, axis=0, ignore_index=True )
+        else:
+            df = data_list[0]
+
+        df.Target = df.Target.astype('str')
+        dff_columns = [ 'sentence', 'source', 'ethos_name', 'Target',  'emotion']# , 'conversation_id','date'
+        df = df.drop_duplicates()
+
+        df['ethos_name'] = df['ethos_label']
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_name'] = df['ethos_label'].map(ethos_mapping)
+
+        dff = df.copy()
+        select_columns = st.multiselect("Choose columns for specifying conditions", dff_columns, dff_columns[-2])
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        dff_selected = dff_selected.drop_duplicates(subset = ['sentence'] )
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[dff_columns].sort_values(by = select_columns).reset_index(drop=True), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
+
+
+
+
+
+
+def TargetHeroScores_compare_prof(data_list, singl_an = True):
+    #st.write("### (Anti)-hero Profile")
+    add_spacelines(1)
+    #contents_radio_heroes = st.radio("Category of the target of ethotic statements", ( "direct ethos", "3rd party ethos"))#"both",
+    st.write("Choose category of the target of ethotic statements")
+    box_direct = st.checkbox("direct ethos", value = False)
+    box_3rd = st.checkbox("3rd party ethos", value = True)
+    contents_radio_unit = 'number' #st.radio("Unit of analysis", ("score", "number"))
+
+    up_data_dict = {}
+    up_data_dicth = {}
+    up_data_dictah = {}
+    target_shared = {}
+    up_data_dict_hist = {}
+
+    n = 0
+    for data in data_list:
+        df = data[data['kind'] == 'ethos'].copy()
+        ds = df['corpus'].iloc[0]
+        if not 'attack' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        df["Target"] = df["Target"].astype('str')
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+        target_shared[n] = set(df["Target"].unique())
+        df = df.drop_duplicates()
+
+        if box_direct and not box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            df = df.drop_duplicates()
+            target_shared[n] = set(df["Target"].unique())
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+        elif not box_direct and box_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            df = df.drop_duplicates()
+            target_shared[n] = set(df["Target"].unique())
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+
+        dd2_size = df.groupby(['Target'], as_index=False).size()
+        dd2_size = dd2_size[dd2_size['size'] > 1]
+        adj_target = dd2_size['Target'].unique()
+
+        dd = pd.DataFrame(df.groupby(['Target'])['ethos_label'].value_counts(normalize=False))
+        dd.columns = ['value']
+        dd = dd.reset_index()
+        dd = dd[dd.Target.isin(adj_target)]
+        dd = dd[dd.ethos_label != 'neutral']
+        dd_hero = dd[dd.ethos_label == 'support']
+        dd_antihero = dd[dd.ethos_label == 'attack']
+
+        dd2 = pd.DataFrame({'Target': dd.Target.unique()})
+        dd2_hist = dd2.copy()
+        dd2anti_scores = []
+        dd2hero_scores = []
+
+        if contents_radio_unit == 'score':
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            #dd2['score'] = dd2['score'] * 100
+            #dd2['score'] = dd2['score'].round()
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+        else:
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            #dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=False)).reset_index()
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+    df_dist_ethos_all = up_data_dict[0].copy()
+    for k in range(int(len(up_data_dict.keys()))-1):
+        k_sub = k+1
+        df_dist_ethos_all = pd.concat([df_dist_ethos_all, up_data_dict[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+
+
+    df_dist_hist_all = up_data_dict_hist[0].copy()
+    for k in range(int(len(up_data_dict_hist.keys()))-1):
+        k_sub = k+1
+        df_dist_hist_all = pd.concat([df_dist_hist_all, up_data_dict_hist[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+
+    df_dist_hist_all = df_dist_hist_all.rename(columns = {'ethos_label':'label'})
+    sns.set(font_scale=1, style='whitegrid')
+
+
+    singl_an = True
+    if singl_an:
+
+        if len( list(target_shared.keys()) )  > 1:
+            target_shared_list = []
+            kk = list(target_shared.keys())
+            target_shared_list = list( set(target_shared[kk[0]]).intersection(set(target_shared[kk[1]])) )
+
+        else:
+            target_shared_list = target_shared[0]
+
+        selected_target = st.selectbox("Choose a target entity you would like to analyse", set(target_shared_list))
+
+
+    heroes_tab1, heroes_tab2, explore_tab = st.tabs(['Bar-chart', 'Tables', 'Cases'])
+
+    with heroes_tab1:
+
+            cols_columns = st.columns(len(data_list), gap='large')
+            for n, c in enumerate(cols_columns):
+                with c:
+                    df = data_list[n].copy()
+                    df = df.drop_duplicates()
+
+                    ds = df['corpus'].iloc[0]
+                    st.write("##### Corpus "+ ds )
+                    #st.dataframe(df)
+                    if not 'neutral' in df['ethos_label'].unique():
+                        df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+                    if not 'negative' in df['pathos_label'].unique():
+                        df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+
+                    # all df targets
+                    df_target_all = pd.DataFrame(df[df.ethos_label.isin( ['attack', 'support'] )]['ethos_label'].value_counts(normalize = True).round(2)*100)
+                    df_target_all.columns = ['percentage']
+                    df_target_all.reset_index(inplace=True)
+                    df_target_all.columns = ['label', 'percentage']
+                    df_target_all = df_target_all.sort_values(by = 'label')
+                    df_target_all_att = df_target_all[df_target_all.label == 'attack']['percentage'].iloc[0]
+                    df_target_all_sup = df_target_all[df_target_all.label == 'support']['percentage'].iloc[0]
+
+                    # chosen target df
+
+                    df_target = pd.DataFrame(df[ (df.Target == str(selected_target)) & \
+                    (df.ethos_label.isin( ['attack', 'support'] )) ]['ethos_label'].value_counts(normalize = True).round(2)*100)
+                    df_target.columns = ['percentage']
+                    df_target.reset_index(inplace=True)
+                    df_target.columns = ['label', 'percentage']
+
+                    if len(df_target) == 1:
+                      if not ("attack" in df_target.label.unique()):
+                          df_target.loc[len(df_target)] = ["attack", 0]
+                      elif not ("support" in df_target.label.unique()):
+                          df_target.loc[len(df_target)] = ["support", 0]
+                    df_target = df_target.sort_values(by = 'label')
+                    df_target_att = df_target[df_target.label == 'attack']['percentage'].iloc[0]
+                    df_target_sup = df_target[df_target.label == 'support']['percentage'].iloc[0]
+
+                    add_spacelines(1)
+                    df_target.columns = ['ethos', 'percentage']
+                    df_dist_ethos = df_target.sort_values(by = 'ethos')
+                    df_dist_ethos['corpus'] = ds
+
+                    sns.set(font_scale=1.35, style='whitegrid')
+                    f_dist_ethos = sns.catplot(kind='bar', data = df_dist_ethos, height=4, aspect=1.4, legend = False,
+                                    x = 'ethos', y = 'percentage', hue = 'ethos', dodge=False,
+                                    palette = {'attack':'#BB0000', 'neutral':'#949494', 'support':'#026F00'})
+                    vals_senti = df_dist_ethos['percentage'].values.round(1)
+                    plt.title(f"Ethos towards **{str(selected_target)}** in {df_dist_ethos.corpus.iloc[0]} \n")
+                    plt.xlabel('')
+                    plt.ylim(0, 105)
+                    plt.yticks(np.arange(0, 105, 20))
+                    for index_senti, v in enumerate(vals_senti):
+                        plt.text(x=index_senti , y = v+1 , s=f"{v}%" , fontdict=dict(ha='center'))
+
+                    add_spacelines(1)
+                    col1, col2 = st.columns([3, 2])
+                    with col2:
+                        st.write("**Hero score** 👑")
+                        col2.metric(str(selected_target), str(df_target_sup)+ str('%'), str(round((df_target_sup - df_target_all_sup),  1))+ str(' p.p.'),
+                        help = f"Percentage of social media posts that support *{selected_target}* and the difference from the average.") # round(((df_target_sup / df_target_all_sup) * 100) - 100, 1)
+
+                    with col1:
+                        st.write("**Villain score** 👎")
+                        col1.metric(str(selected_target), str(df_target_att)+ str('%'), str(round((df_target_att - df_target_all_att),  1))+ str(' p.p.'), delta_color="inverse",
+                        help = f"Percentage of social media posts that attack *{selected_target}* and the difference from the average.")
+                    add_spacelines(1)
+
+                    st.pyplot(f_dist_ethos)
+
+
+    with heroes_tab2:
+        add_spacelines()
+        sns.set(font_scale=2, style='whitegrid')
+        if len(data_list) > 1:
+            df = pd.concat( data_list, axis=0, ignore_index=True )
+        else:
+            df = data_list[0]
+
+        if not 'negative' in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping).str.replace('neutral p', 'neutral')
+
+        if not 'neutral' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+
+        df.loc[~(df['source'].str.startswith("@")), 'source'] = df.loc[~(df['source'].str.startswith("@")), 'source'].apply(lambda x: "@" + x)
+        df = df.drop_duplicates()
+
+        cols = ['sentence', 'ethos_label',  'emotion',  'source', 'Target', 'corpus'] #, 'date', 'conversation_id'
+        if len(df[df.Target == str(selected_target)]) == 1:
+            st.write(f"{len(df[df.Target == str(selected_target)])} case of ethotic statements towards **{selected_target}** ")
+        else:
+            st.write(f"{len(df[df.Target == str(selected_target)])} cases of ethotic statements towards **{selected_target}** ")
+        if not "neutral" in df['pathos_label'].unique():
+            df['pathos_label'] = df['pathos_label'].map(valence_mapping)
+        st.dataframe(df[df.Target == str(selected_target)][cols].set_index('source').rename(columns={'ethos_label':'ethos', 'pathos_label':'pathos'}), width = None)
+        add_spacelines(1)
+
+    with explore_tab:
+        add_spacelines()
+        select_columns = st.multiselect("Choose columns for specifying conditions", cols, cols[1])
+        dff = df.copy()
+        cols_columns = st.columns(len(select_columns))
+        dict_cond = {}
+        for n, c in enumerate(cols_columns):
+            with c:
+                cond_col = st.multiselect(f"Choose condition for *{select_columns[n]}*",
+                                       (dff[select_columns[n]].unique()), (dff[select_columns[n]].unique()[-1]))
+                dict_cond[select_columns[n]] = cond_col
+        dff_selected = dff.copy()
+        for i, k in enumerate(dict_cond.keys()):
+            dff_selected = dff_selected[ dff_selected[str(k)].isin(dict_cond[k]) ]
+        add_spacelines(2)
+        st.dataframe(dff_selected[cols].sort_values(by = select_columns).drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1), width = None)
+        st.write(f"No. of cases: {len(dff_selected)}.")
+
+
+def TargetHeroScores_compare_word(data_list, chbox_3rd, chbox_direct, singl_an = True):
+    #st.write("### (Anti)-hero WordCloud")
+
+    contents_radio_unit = 'number' #st.radio("Unit of analysis", ("score", "number"))
+
+    up_data_dict = {}
+    up_data_dicth = {}
+    up_data_dictah = {}
+    target_shared = {}
+    up_data_dict_hist = {}
+
+    n = 0
+    for data in data_list:
+        df = data.copy()
+        ds = df['corpus'].iloc[0]
+        if not 'attack' in df['ethos_label'].unique():
+            df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
+        df["Target"] = df["Target"].astype('str')
+        df = df[ (df.Target != 'nan') & (df.Target != '') & (df.ethos_label != 'neutral') ]
+        df["Target"] = df["Target"].str.replace('Government', 'government')
+        df = df.drop_duplicates()
+        target_shared[n] = set(df["Target"].unique())
+
+        if chbox_direct and not chbox_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            target_shared[n] = set(df["Target"].unique())
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+
+        elif not chbox_direct and chbox_3rd:
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            df = df[df.Target.isin(targets_limit)]
+            target_shared[n] = set(df["Target"].unique())
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+
+        dd2_size = df.groupby(['Target'], as_index=False).size()
+        dd2_size = dd2_size[dd2_size['size'] > 1]
+        adj_target = dd2_size['Target'].unique()
+
+        dd = pd.DataFrame(df.groupby(['Target'])['ethos_label'].value_counts(normalize=False))
+        dd.columns = ['value']
+        dd = dd.reset_index()
+        dd = dd[dd.Target.isin(adj_target)]
+        dd = dd[dd.ethos_label != 'neutral']
+        dd_hero = dd[dd.ethos_label == 'support']
+        dd_antihero = dd[dd.ethos_label == 'attack']
+
+        dd2 = pd.DataFrame({'Target': dd.Target.unique()})
+        dd2_hist = dd2.copy()
+        dd2anti_scores = []
+        dd2hero_scores = []
+
+        if contents_radio_unit == 'score':
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            #dd2['score'] = dd2['score'] * 100
+            #dd2['score'] = dd2['score'].round()
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+        else:
+            dd2['score'] = np.nan
+            dd2['number'] = np.nan
+            dd2['appeals'] = np.nan
+            for t in dd.Target.unique():
+                try:
+                    h = dd_hero[dd_hero.Target == t]['value'].iloc[0]
+                except:
+                    h = 0
+                try:
+                    ah = dd_antihero[dd_antihero.Target == t]['value'].iloc[0]
+                except:
+                    ah = 0
+                dd2hero_scores.append(h)
+                dd2anti_scores.append(ah)
+                i = dd2[dd2.Target == t].index
+                dd2.loc[i, 'score'] = ah / (ah + h)
+                if h > ah:
+                    dd2.loc[i, 'number'] = h
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                    dd2.loc[i, 'ethos_label'] = 'heroes'
+                elif h < ah:
+                    dd2.loc[i, 'number'] = ah
+                    dd2.loc[i, 'ethos_label'] = 'villains'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+                else:
+                    dd2.loc[i, 'number'] = 0
+                    dd2.loc[i, 'ethos_label'] = 'nn'
+                    dd2.loc[i, 'appeals'] = (ah + h)
+
+            dd2 = dd2[dd2.score != 0]
+            dd2 = dd2[dd2.ethos_label != 'nn']
+            #dd2['ethos_label'] = np.where(dd2.score < 0, 'villains', 'neutral')
+            #dd2['ethos_label'] = np.where(dd2.score > 0, 'heroes', dd2['ethos_label'])
+            dd2 = dd2.sort_values(by = ['ethos_label', 'Target'])
+            dd2['corpus'] = ds
+            #st.write(dd2)
+            up_data_dict_hist[n] = dd2
+            #st.write(dd2)
+            #st.stop()
+            #dd2['score'] = dd2[dd2['ethos_label'] != 'neutral' ]
+            #dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=False)).reset_index()
+            dd2_dist = pd.DataFrame(dd2['ethos_label'].value_counts(normalize=True).round(3)*100).reset_index()
+            dd2_dist.columns = ['heroes', 'percentage']
+            dd2_dist['corpus'] = ds
+            up_data_dict[n] = dd2_dist
+            up_data_dicth[n] = dd2[dd2['ethos_label'] == 'heroes']['Target'].unique()
+            up_data_dictah[n] = dd2[dd2['ethos_label'] == 'villains']['Target'].unique()
+            n += 1
+
+    df_dist_ethos_all = up_data_dict[0].copy()
+    for k in range(int(len(up_data_dict.keys()))-1):
+        k_sub = k+1
+        df_dist_ethos_all = pd.concat([df_dist_ethos_all, up_data_dict[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+
+
+    df_dist_hist_all = up_data_dict_hist[0].copy()
+    for k in range(int(len(up_data_dict_hist.keys()))-1):
+        k_sub = k+1
+        df_dist_hist_all = pd.concat([df_dist_hist_all, up_data_dict_hist[k_sub]], axis=0, ignore_index=True)
+
+    sns.set(font_scale=1.35, style='whitegrid')
+    df_dist_hist_all = df_dist_hist_all.rename(columns = {'ethos_label':'label'})
+
+
+    if len(data_list) > 1:
+            df = pd.concat( data_list, axis=0, ignore_index=True )
+    else:
+            df = data_list[0]
+
+    singl_an = True
+    df = df.drop_duplicates()        
+    if singl_an:
+        if len( list(target_shared.keys()) )  > 1:
+            target_shared_list = []
+            kk = list(target_shared.keys())
+            target_shared_list = list( set(target_shared[kk[0]]).intersection(set(target_shared[kk[1]])) )
+
+        else:
+            target_shared_list = target_shared[0]
+
+    add_spacelines(1)
+    selected_target = st.selectbox("Choose a target entity you would like to analyse", set(target_shared_list))
+
+    # chosen target df
+    df = df[ (df.Target == str(selected_target)) &  (df.ethos_label.isin( ['attack', 'support'] )) ]
+    df0 = df.copy()
+
+    if "&" in df.corpus.iloc[0]:
+            ds = "Covid & ElectionsSM"
+            df['corpus'] = ds
+
+    sns.set(font_scale=1.35, style='whitegrid')
+    add_spacelines(1)
+    corps = df.corpus.unique()
+
+    heroes_tab1, heroes_tab2, heroes_tab_explore = st.tabs(['Plot', 'Tables', 'Cases'])
+
+    for corp in corps:
+
+        with heroes_tab1:
+            add_spacelines(1)
+            st.write(corp)
+            #df = df0[ df0['corpus'] == corp ]
+            df = clean_text(df, 'sentence_lemmatized', text_column_name = "sentence_lemmatized")
+            df = df.drop_duplicates()
+            data_neutral = df[df.ethos_label != label_cloud]
+            neu_text = " ".join(data_neutral['sentence_lemmatized'].apply(lambda x: " ".join(t for t in set(x.split()))).to_numpy())
+            count_dict_df_neu_text = Counter(neu_text.split(" "))
+
+            df_neu_text = pd.DataFrame( {"word": list(count_dict_df_neu_text.keys()),
+                                        'other #': list(count_dict_df_neu_text.values())} )
+
+            data_attack = df[df.ethos_label == label_cloud]
+
+            att_text = " ".join(data_attack['sentence_lemmatized'].apply(lambda x: " ".join(t for t in set(x.split()))).to_numpy())
+            count_dict_df_att_text = Counter(att_text.split(" "))
+            df_att_text = pd.DataFrame( {"word": list(count_dict_df_att_text.keys()),
+                                        label_cloud+' #': list(count_dict_df_att_text.values())} )
+
+
+            df_for_wordcloud = pd.merge(df_att_text, df_neu_text, on = 'word', how = 'outer')
+            df_for_wordcloud.fillna(0, inplace=True)
+            #st.write(df_for_wordcloud)
+
+            df_for_wordcloud['general #'] = df_for_wordcloud['other #'].astype('int') + df_for_wordcloud[label_cloud+' #'].astype('int')
+            df_for_wordcloud['word'] = df_for_wordcloud['word'].str.replace("'", "_").replace("”", "_").replace("’", "_")
+            df_for_wordcloud.sort_values(by = label_cloud + ' #', inplace=True, ascending=False)
+            df_for_wordcloud.reset_index(inplace=True, drop=True)
+            #st.write(df_for_wordcloud)
+
+            analysis_for = label_cloud
+            df_for_wordcloud['precis'] = (round(df_for_wordcloud[label_cloud+' #'] / df_for_wordcloud['general #'], 3) * 100).apply(float) # att
+
+            #fig_cloud1, df_cloud_words1, figure_cloud_words1 = wordcloud_lexeme(df_for_wordcloud, lexeme_threshold = threshold_cloud, analysis_for = str(label_cloud))
+            if label_cloud == 'attack':
+              #print(f'Analysis for: {analysis_for} ')
+              cmap_wordcloud = 'Reds' #gist_heat
+            elif label_cloud == 'both':
+              #print(f'Analysis for: {analysis_for} ')
+              cmap_wordcloud = 'autumn' #viridis
+            else:
+              #print(f'Analysis for: {analysis_for} ')
+              cmap_wordcloud = 'Greens'
+
+            dfcloud = df_for_wordcloud[(df_for_wordcloud['precis'] >= int(threshold_cloud)) & (df_for_wordcloud['general #'] > 1) & (df_for_wordcloud.word.map(len)>3)]
+            #print(f'There are {len(dfcloud)} words for the analysis of language {analysis_for} with precis threshold equal to {lexeme_threshold}.')
+            try:
+                    n_words = dfcloud['word'].nunique()
+            except:
+                    st.error('No words with a specified threshold.')
+                    st.stop()
+            text = []
+            for i in dfcloud.index:
+              w = dfcloud.loc[i, 'word']
+              w = str(w).strip()
+              if analysis_for == 'both':
+                n = int(dfcloud.loc[i, 'support #'] + dfcloud.loc[i, 'attack #'])
+              else:
+                n = int(dfcloud.loc[i, str(analysis_for)+' #']) #  + dfcloud.loc[i, 'attack #']   dfcloud.loc[i, 'support #']+  general
+              l = np.repeat(w, n)
+              text.extend(l)
+
+            import random
+            random.shuffle(text)
+            #st.write(f"There are {n_words} words.")
+            if n_words < 1:
+                st.error('No words with a specified threshold. \n Try lower value of threshold.')
+                st.stop()
+            figure_cloud, figure_cloud_words = make_word_cloud(" ".join(text), 1000, 620, '#1E1E1E', str(cmap_wordcloud), stops = box_stopwords)
+            #st.write(f"There are {len(figure_cloud_words)} words.")
+            #st.pyplot(figure_cloud)
+
+            df_cloud_words1 = dfcloud.copy()
+            df_cloud_words1 = df_cloud_words1.rename(columns = {'general #':'overall #', 'precis':'precision'})
+            df_cloud_words1 = df_cloud_words1.sort_values(by = 'precision', ascending = False)
+            df_cloud_words1 = df_cloud_words1.reset_index(drop = True)
+            df_cloud_words1.index += 1
+            #st.write(df_cloud_words1)
+
+            st.write(f"There are {len(figure_cloud_words)} words.")
+            st.pyplot(figure_cloud)
+
+
+        with heroes_tab2:
+            add_spacelines(1)
+            st.write(corp)
+            st.write(df_cloud_words1)
+
+
+    with heroes_tab_explore:
+        add_spacelines()
+        cols_odds1 = ['source', 'sentence', 'ethos_label',  'Target',  'emotion', 'freq_words_'+label_cloud, 'corpus']
+
+        pos_list_freq = df_cloud_words1.word.tolist()
+        freq_word_pos = st.multiselect('Choose word(s) you would like to see data cases for', pos_list_freq, pos_list_freq[:2])
+        df_odds_pos_words = set(freq_word_pos)
+        df['freq_words_'+label_cloud] = df.sentence_lemmatized.apply(lambda x: " ".join( set(x.split()).intersection(df_odds_pos_words) ))
+        df = df.drop_duplicates()
+
+        add_spacelines(1)
+        st.write(f'Cases with **{freq_word_pos}** words:')
+        st.dataframe(df[ (df['freq_words_'+label_cloud].str.split().map(len) >= 1) & (df[selected_rhet_dim] == label_cloud) ][cols_odds1])# .set_index('source')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def TargetHeroScores_compare(data_list, singl_an = True):
     st.write("### (Anti)-heroes")
     add_spacelines(1)
@@ -6071,7 +7756,7 @@ with st.sidebar:
             contents_radio_an_cat = st.radio("Analytics Units", ('Sentence-based', 'Entity-based'))#, 'Time-based'
             add_spacelines(1)
             if contents_radio_an_cat == 'Entity-based':
-                contents_radio3 = st.radio("Analytics", {'(Anti)-heroes'})
+                contents_radio3 = st.radio("Analytics", {'(Anti)-heroes', "Villain Score", "Villain Profile", "Villain WordCloud"})
             else:
                 contents_radio3 = st.radio("Analytics", ('Distribution', 'WordCloud'))
             #add_spacelines(1)
@@ -6294,7 +7979,7 @@ with st.sidebar:
             contents_radio_an_cat = st.radio("Analytics Units", ('Sentence-based', 'Entity-based'))
             add_spacelines(1)
             if contents_radio_an_cat == 'Entity-based':
-                contents_radio3 = st.radio("Analytics", ['(Anti)-heroes',  "Profiles", "Fellows-Devils", ]) # "Polarising Tendency" "Rhetoric Strategies",
+                contents_radio3 = st.radio("Analytics", ['(Anti)-heroes',  "Villain Score", "Villain Profile", "Villain WordCloud",  "Fellows-Devils", ]) # "Polarising Tendency" "Rhetoric Strategies",  "Profiles",
             else:
                 contents_radio3 = st.radio("Analytics", ("Corpora Summary", 'Distribution', 'WordCloud', 'Frequency Tables',
                                             'Odds ratio', 'Pronouns')) # , 'Explore corpora'
@@ -6580,7 +8265,7 @@ with st.sidebar:
         contents_radio_an_cat = st.radio("Analytics Units", ('ADU-based', 'Relation-based', 'Entity-based'))
         add_spacelines(1)
         if contents_radio_an_cat == 'Entity-based':
-            contents_radio3 = st.radio("Analytics", ['(Anti)-heroes', "Profiles"])
+            contents_radio3 = st.radio("Analytics", ['(Anti)-heroes', "Villain Score", "Villain Profile", "Villain WordCloud", ])#"Profiles"
         else:
             contents_radio3 = st.radio("Analytics", ("Corpora Summary", 'Distribution', 'WordCloud', 'Frequency Tables', 'Odds Ratio', 'Lexical Stats'))# , 'Odds ratio', 'Explore corpora'
         #add_spacelines(1)
@@ -6911,6 +8596,20 @@ elif contents_radio_type == 'Compare Corpora' and contents_radio_rhetoric_catego
             ProfilesEntity_compare(data_list = corpora_list[:1], selected_rhet_dim = selected_rhet_dim)
         with cols_columns2:
             ProfilesEntity_compare(data_list = corpora_list[-2:-1], selected_rhet_dim = selected_rhet_dim)
+
+
+
+elif contents_radio3 == 'Villain Frequency':
+    TargetHeroScores_compare_freq(data_list = corpora_list, singl_an = False)
+elif contents_radio3 == 'Villain Score':
+    TargetHeroScores_compare_scor2(data_list = corpora_list, singl_an = False)
+
+elif contents_radio3 == 'Villain Profile':
+    TargetHeroScores_compare_prof(data_list = corpora_list, singl_an = False)
+
+elif contents_radio3 == 'Villain WordCloud':
+    TargetHeroScores_compare_word(data_list = corpora_list, singl_an = False)
+
 
 
 elif not contents_radio_rhetoric_category_ethos and contents_radio_type == 'Compare Corpora' and contents_radio_rhetoric_category_logos and contents_radio3 == '(Anti)-heroes':
