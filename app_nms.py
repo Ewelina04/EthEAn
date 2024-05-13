@@ -5335,7 +5335,7 @@ def TargetHeroScores_compare_prof(data_list, singl_an = True):
 
     n = 0
     for data in data_list:
-        df = data[data['kind'] == 'ethos'].copy()
+        df = data.copy()
         ds = df['corpus'].iloc[0]
         if not 'attack' in df['ethos_label'].unique():
             df['ethos_label'] = df['ethos_label'].map(ethos_mapping)
@@ -7781,7 +7781,7 @@ with st.sidebar:
             contents_radio_an_cat = st.radio("Analytics Units", ('Sentence-based', 'Entity-based'))#, 'Time-based'
             add_spacelines(1)
             if contents_radio_an_cat == 'Entity-based':
-                contents_radio3 = st.radio("Analytics", {'(Anti)-heroes', "Villain Score", "Villain Profile", "Villain WordCloud"})
+                contents_radio3 = st.radio("Analytics", {'(Anti)-heroes',  "Villain Frequency",  "Villain Score", "Villain Profile", "Villain WordCloud"})
             else:
                 contents_radio3 = st.radio("Analytics", ('Distribution', 'WordCloud'))
             #add_spacelines(1)
@@ -8004,7 +8004,7 @@ with st.sidebar:
             contents_radio_an_cat = st.radio("Analytics Units", ('Sentence-based', 'Entity-based'))
             add_spacelines(1)
             if contents_radio_an_cat == 'Entity-based':
-                contents_radio3 = st.radio("Analytics", ['(Anti)-heroes',  "Villain Score", "Villain Profile", "Villain WordCloud",  "Fellows-Devils", ]) # "Polarising Tendency" "Rhetoric Strategies",  "Profiles",
+                contents_radio3 = st.radio("Analytics", ['(Anti)-heroes', "Villain Frequency", "Villain Score", "Villain Profile", "Villain WordCloud",  "Fellows-Devils", ]) # "Polarising Tendency" "Rhetoric Strategies",  "Profiles",
             else:
                 contents_radio3 = st.radio("Analytics", ("Corpora Summary", 'Distribution', 'WordCloud', 'Frequency Tables',
                                             'Odds ratio', 'Pronouns')) # , 'Explore corpora'
@@ -8290,7 +8290,7 @@ with st.sidebar:
         contents_radio_an_cat = st.radio("Analytics Units", ('ADU-based', 'Relation-based', 'Entity-based'))
         add_spacelines(1)
         if contents_radio_an_cat == 'Entity-based':
-            contents_radio3 = st.radio("Analytics", ['(Anti)-heroes', "Villain Score", "Villain Profile", "Villain WordCloud", ])#"Profiles"
+            contents_radio3 = st.radio("Analytics", ['(Anti)-heroes', "Villain Frequency", "Villain Score", "Villain Profile", "Villain WordCloud", ])#"Profiles"
         else:
             contents_radio3 = st.radio("Analytics", ("Corpora Summary", 'Distribution', 'WordCloud', 'Frequency Tables', 'Odds Ratio', 'Lexical Stats'))# , 'Odds ratio', 'Explore corpora'
         #add_spacelines(1)
