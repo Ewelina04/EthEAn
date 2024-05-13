@@ -5339,8 +5339,8 @@ def distribution_plot_compareX_sub_cross(data_list0, an_unit, dim1, dim2, target
         df_dist_mix['categories'] = df_dist_mix[dim10].astype('str') + ' ' + df_dist_mix[dim20].astype('str')
         df_dist_mix = df_dist_mix.sort_values(by = col_unit, ascending=False)
         #st.write(df_dist_ethos_all)
-        fg_mix=sns.catplot(kind='bar', data=df_dist_mix, y = 'categories', x = col_unit,
-                        dodge=True, legend = False, aspect = 1.4, color = 'grey' )
+        fg_mix=sns.catplot(kind='bar', data=df_dist_mix, y = dim10, x = col_unit, hue = dim20, palette = colors, 
+                        dodge=True, legend = True, aspect = 1.4, )
         if col_unit == 'percentage':
             plt.xlim(0, 100)
             plt.xticks(np.arange(0, 101, 20))
