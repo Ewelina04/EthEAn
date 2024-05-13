@@ -64,6 +64,31 @@ ethos_mapping = {0: 'neutral', 1: 'support', 2: 'attack'}
 valence_mapping = {0: 'neutral', 1: 'positive', 2: 'negative'}
 
 
+def highlight(s):
+    if s.score >= 0.5:
+        return ['background-color: red'] * len(s)
+    elif s.score < 0.5:
+        return ['background-color: green'] * len(s)
+    else:
+        return ['background-color: white'] * len(s)
+
+def colorred(s):
+    if s.label == 'villains':
+        return ['background-color: red'] * len(s)
+    elif s.label == 'heroes':
+        return ['background-color: green'] * len(s)
+    else:
+        return ['background-color: white'] * len(s)
+
+def highlight2(s):
+                    if s.score < 0:
+                        return ['background-color: red'] * len(s)
+                    elif s.score > 0:
+                        return ['background-color: green'] * len(s)
+                    else:
+                        return ['background-color: white'] * len(s)
+
+
 def clean_text(df, text_column, text_column_name = "content"):
   import re
   new_texts = []
