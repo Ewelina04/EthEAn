@@ -2266,10 +2266,10 @@ def FreqTables(data_list, rhetoric_dims = [ 'ethos']):
         df['sentence'] = df.sentence.astype('str').str.replace("amp;", "")
 
         emo_list = list( df.emotion.unique() )
-        emo_list.append('all')
-        contents_radio_emotion_freq_tab = st.radio("Choose a category of emotions", emo_list[::-1])
-        if contents_radio_emotion_freq_tab != 'all':
-            df = df[df.emotion == contents_radio_emotion_freq_tab]
+        #emo_list.append('all')
+        contents_radio_emotion_freq_tab = st.multiselect("Choose a category of emotions", emo_list, emo_list)
+        if len(contents_radio_emotion_freq_tab) != 7:
+            df = df[df.emotion.isin( contents_radio_emotion_freq_tab) ]
 
         if contents_radio_heroes == "direct ethos":
             targets_limit = df['Target'].dropna().unique()
@@ -3831,7 +3831,7 @@ def generateWordCloud_sub_log(data_list,
 
 
 
-def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'ethos & emotion'], an_type = 'ADU-based'):
+def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'sentiment', 'ethos & sentiment', 'ethos & emotion'], an_type = 'ADU-based'):
     #st.header(f" Text-Level Analytics ")
 
     selected_rhet_dim = st.selectbox("Choose a rhetoric category for a WordCloud", rhetoric_dims, index=0)
@@ -3850,7 +3850,9 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'ethos & emotion'], a
     else:
         df = data_list[0]
         label_cloud = st.radio("Choose a label of **ethos** for words in WordCloud", ('attack', 'support'))
-        label_cloud_emo = st.radio("Choose a label of **emotion** for words in WordCloud", set( df.emotion.unique()))
+        selected_rhet_dim_2 = selected_rhet_dim.split("&")[-1]
+        selected_rhet_dim_2_list = list( df[str(selected_rhet_dim_2).strip() ].unique())
+        label_cloud_emo = st.multiselect(f"Choose a label of **{selected_rhet_dim_2}** for words in WordCloud", selected_rhet_dim_2_list, selected_rhet_dim_2_list[:1])
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label")
 
     add_spacelines(1)
@@ -3878,12 +3880,10 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'ethos & emotion'], a
             st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
             st.stop()
 
-    add_spacelines(1)
 
-    threshold_cloud = st.slider('Select a precision value (threshold) for words in WordCloud', 0, 100, 80)
+    threshold_cloud = st.slider('Select a precision value (threshold) for words in WordCloud', 0, 100, 60)
     st.info(f'Selected precision: **{threshold_cloud}**')
 
-    add_spacelines(1)
     st.write("**Processing the output ...**")
     #my_bar = st.progress(0)
     #for percent_complete in range(100):
@@ -3899,55 +3899,21 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'ethos & emotion'], a
         if not 'pathos_label' in df['pathos_label'].unique():
             df['pathos_label'] = df['pathos_label'].map(valence_mapping)
 
-    elif selected_rhet_dim == 'logos':
-        df = data_list[-1] #pd.concat(data_list, axis=0, ignore_index=True)
-        df = df.dropna(subset = 'premise')
-        df['sentence_lemmatized'] = df['premise'].astype('str') + " " + df['conclusion'].astype('str')
-
-        if an_type != 'Relation-based':
-            df = lemmatization(df, 'sentence_lemmatized', name_column = True)
-            df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str').str.lower().str.replace('ahould', 'should')
-
-        elif an_type == 'Relation-based':
-            df['premise'] = df['premise'].astype('str')
-            df['conclusion'] = df['conclusion'].astype('str')
-            df = df.reset_index()
-
-            dfp = df.groupby(['id_connection', 'connection'])['premise'].apply(lambda x: " ".join(x)).reset_index()
-            #st.write(dfp)
-            #dfp['sentence_lemmatized'] = dfp['sentence_lemmatized'].astype('str')
-            dfc = df.groupby(['id_connection', 'connection'])['conclusion'].apply(lambda x: " ".join(x)).reset_index()
-            #st.write(dfc)
-
-            dfp = dfp.merge(dfc, on = ['id_connection', 'connection']) #pd.concat([dfp, dfc.iloc[:, -1:]], axis=1) #dfp.merge(dfc, on = ['id_connection', 'connection'])
-            dfp = dfp.drop_duplicates()
-            #st.write(dfp)
-            #st.write(dfp[dfp.id_connection == 185352])
-            #st.stop()
-            dfp['sentence_lemmatized'] = dfp.premise.astype('str')+ " " + dfc['conclusion'].astype('str')
-            #st.write(dfp)
-            import re
-            dfp['sentence_lemmatized'] = dfp['sentence_lemmatized'].apply(lambda x: re.sub(r"\W+", " ", str(x)))
-            dfp = lemmatization(dfp, 'sentence_lemmatized', name_column = True)
-            dfp['sentence_lemmatized'] = dfp['sentence_lemmatized'].astype('str').str.lower().str.replace('ahould', 'should')
-            df = dfp.copy()
-            #st.write(dfc.shape, dfp.shape, df.shape)
-
-
     if (selected_rhet_dim == 'ethos_label'):
          df_for_wordcloud = prepare_cloud_lexeme_data(df[df[str(selected_rhet_dim)] == 'neutral'],
          df[df[str(selected_rhet_dim)] == 'support'],
          df[df[str(selected_rhet_dim)] == 'attack'])
 
-    elif (selected_rhet_dim == 'ethos_label & emotion'):
-         df_for_wordcloud = prepare_cloud_lexeme_data(df[ (df['ethos_label'] == 'neutral') & (df['emotion'] == str(label_cloud_emo)) ],
-         df[ (df['ethos_label'] == 'support') & (df['emotion'] == str(label_cloud_emo)) ],
-         df[ (df['ethos_label'] == 'attack') & (df['emotion'] == str(label_cloud_emo)) ])
+    elif (selected_rhet_dim == 'ethos_label & emotion') or (selected_rhet_dim == 'ethos_label & sentiment'):
+         df_for_wordcloud = prepare_cloud_lexeme_data(df[ (df['ethos_label'] == 'neutral') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
+         df[ (df['ethos_label'] == 'support') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
+         df[ (df['ethos_label'] == 'attack') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ])
 
-    elif selected_rhet_dim == 'logos':
-         df_for_wordcloud = prepare_cloud_lexeme_data(df[ ~(df['connection'].isin(['Default Inference', 'Default Conflict'])) ],
-         df[df['connection'] == 'Default Inference'],
-         df[df['connection'] == 'Default Conflict'])
+    elif (selected_rhet_dim == 'emotion'):
+         df_for_wordcloud = prepare_cloud_lexeme_data(df[ (df[selected_rhet_dim_2].isin( ['neutral'] )) ],
+         df[ (df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
+         df[ ~(df[selected_rhet_dim_2].isin( label_cloud_emo )) ])    
+
     else:
         df_for_wordcloud = prepare_cloud_lexeme_data(df[df[str(selected_rhet_dim)] == 'neutral'],
         df[df[str(selected_rhet_dim)] == 'positive'],
