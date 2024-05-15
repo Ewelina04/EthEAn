@@ -3844,10 +3844,12 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'sentiment', 'ethos &
         df = data_list[0]
         label_cloud = st.radio("Choose a label of **ethos** for words in WordCloud", ('attack', 'support'))
         selected_rhet_dim_2 = selected_rhet_dim.split("&")[-1]
+        selected_rhet_dim_2 = str(selected_rhet_dim_2).strip()
         selected_rhet_dim_2_list = list( df[str(selected_rhet_dim_2).strip() ].unique())
         selected_rhet_dim_2_list.remove('neutral')
         label_cloud_emo = st.multiselect(f"Choose a label of **{selected_rhet_dim_2}** for words in WordCloud", selected_rhet_dim_2_list, selected_rhet_dim_2_list[:1])
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label")
+        
 
     add_spacelines(1)
 
