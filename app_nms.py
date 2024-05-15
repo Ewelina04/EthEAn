@@ -3808,15 +3808,8 @@ def generateWordCloud_sub_log(data_list,
     st.write(df_cloud_words1)
 
 
-    cols_odds1 = ['source', 'sentence', 'ethos_label', 'pathos_label', 'Target',
+    cols_odds1 = ['source', 'sentence', 'ethos_label', 'sentiment', 'emotion', 'Target',
                          'markers_'+label_cloud]
-
-    if selected_rhet_dim == 'logos':
-        df = df.rename(columns = {'connection':'logos'})
-        #cols_odds1 = ['locution_conclusion', 'locution_premise', 'logos', 'argument_linked', 'markers_'+label_cloud]
-        cols_odds1 = ['premise', 'conclusion', 'sentence_lemmatized', 'logos', 'markers_'+label_cloud]
-        df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str')
-        df['logos'] = df['logos'].map({'Default Inference':'support', 'Default Conflict':'attack'})
 
     pos_list_freq = df_cloud_words1.word.tolist()
     freq_word_pos = st.multiselect('Choose word(s) you would like to see data cases for', pos_list_freq, pos_list_freq[:2])
@@ -3852,6 +3845,7 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'sentiment', 'ethos &
         label_cloud = st.radio("Choose a label of **ethos** for words in WordCloud", ('attack', 'support'))
         selected_rhet_dim_2 = selected_rhet_dim.split("&")[-1]
         selected_rhet_dim_2_list = list( df[str(selected_rhet_dim_2).strip() ].unique())
+        selected_rhet_dim_2_list.remove('neutral')
         label_cloud_emo = st.multiselect(f"Choose a label of **{selected_rhet_dim_2}** for words in WordCloud", selected_rhet_dim_2_list, selected_rhet_dim_2_list[:1])
         selected_rhet_dim = selected_rhet_dim.replace("ethos", "ethos_label")
 
@@ -3860,25 +3854,25 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'sentiment', 'ethos &
     contents_radio_heroes = st.radio("Category of the target of ethotic statements", ("both", "direct ethos", "3rd party ethos"))
     df.Target = df.Target.astype('str')
     df['sentence'] = df.sentence.astype('str').str.replace("amp;", "")
-
-    if contents_radio_heroes == "direct ethos":
-        targets_limit = df['Target'].dropna().unique()
-        targets_limit = [t for t in targets_limit if "@" in t]
-        targets_limit.append('nan')
-
-        df = df[df.Target.isin(targets_limit)]
-        if len(targets_limit) < 2:
-            st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
-            st.stop()
-    elif contents_radio_heroes == "3rd party ethos":
-        targets_limit = df['Target'].dropna().unique()
-        targets_limit = [t for t in targets_limit if not "@" in t]
-        targets_limit.append('nan')
-
-        df = df[df.Target.isin(targets_limit)]
-        if len(targets_limit) < 2:
-            st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
-            st.stop()
+    if 'ethos' in selected_rhet_dim:
+        if contents_radio_heroes == "direct ethos":
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if "@" in t]
+            targets_limit.append('nan')
+    
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
+        elif contents_radio_heroes == "3rd party ethos":
+            targets_limit = df['Target'].dropna().unique()
+            targets_limit = [t for t in targets_limit if not "@" in t]
+            targets_limit.append('nan')
+    
+            df = df[df.Target.isin(targets_limit)]
+            if len(targets_limit) < 2:
+                st.error(f'No cases of **{contents_radio_heroes}** found in the chosen corpora.')
+                st.stop()
 
 
     threshold_cloud = st.slider('Select a precision value (threshold) for words in WordCloud', 0, 100, 60)
@@ -3905,14 +3899,9 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'sentiment', 'ethos &
          df[df[str(selected_rhet_dim)] == 'attack'])
 
     elif (selected_rhet_dim == 'ethos_label & emotion') or (selected_rhet_dim == 'ethos_label & sentiment'):
-         df_for_wordcloud = prepare_cloud_lexeme_data(df[ (df['ethos_label'] == 'neutral') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
+         df_for_wordcloud = prepare_cloud_lexeme_data(df[ (df['ethos_label'] == 'neutral') & ~(df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
          df[ (df['ethos_label'] == 'support') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
-         df[ (df['ethos_label'] == 'attack') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ])
-
-    elif (selected_rhet_dim == 'emotion'):
-         df_for_wordcloud = prepare_cloud_lexeme_data(df[ (df[selected_rhet_dim_2].isin( ['neutral'] )) ],
-         df[ (df[selected_rhet_dim_2].isin( label_cloud_emo )) ],
-         df[ ~(df[selected_rhet_dim_2].isin( label_cloud_emo )) ])    
+         df[ (df['ethos_label'] == 'attack') & (df[selected_rhet_dim_2].isin( label_cloud_emo )) ])  
 
     else:
         df_for_wordcloud = prepare_cloud_lexeme_data(df[df[str(selected_rhet_dim)] == 'neutral'],
@@ -3946,15 +3935,7 @@ def generateWordCloud(data_list, rhetoric_dims = ['ethos', 'sentiment', 'ethos &
     st.write(df_cloud_words1)
 
 
-    cols_odds1 = ['source', 'sentence', 'markers_'+label_cloud, 'ethos_label', 'emotion', 'Target', 'sentiment',
-                         ]
-
-    if selected_rhet_dim == 'logos':
-        df = df.rename(columns = {'connection':'logos'})
-        #cols_odds1 = ['locution_conclusion', 'locution_premise', 'logos', 'argument_linked', 'markers_'+label_cloud]
-        cols_odds1 = ['premise', 'conclusion', 'sentence_lemmatized', 'logos', 'markers_'+label_cloud]
-        df['sentence_lemmatized'] = df['sentence_lemmatized'].astype('str')
-        df['logos'] = df['logos'].map({'Default Inference':'support', 'Default Conflict':'attack'})
+    cols_odds1 = ['source', 'sentence', 'markers_'+label_cloud, 'ethos_label', 'emotion', 'Target', 'sentiment']
 
     pos_list_freq = df_cloud_words1.word.tolist()
     freq_word_pos = st.multiselect('Choose word(s) you would like to see data cases for', pos_list_freq, pos_list_freq[:2])
