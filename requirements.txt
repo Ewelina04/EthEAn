@@ -7,6 +7,7 @@ seaborn
 scikit-learn
 openpyxl
 spacy==3.4.0
+typing_extensions==4.4.0
 plotly
 pygraphviz 
 networkx
